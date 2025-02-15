@@ -1,0 +1,16 @@
+# .air.toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main ."
+  bin = "./tmp/main"
+  include = ["."]
+  exclude = ["assets", "tmp", "vendor"]
+
+[watch]
+  include = ["."]
+  exclude = ["assets", "tmp", "vendor"]
+
+[logger]
+  time = true

@@ -1,0 +1,23 @@
+package models
+
+type ContentTypeEnum string
+
+const (
+	Single     ContentTypeEnum = "single"
+	Collection ContentTypeEnum = "collection"
+)
+
+// IsValid checks if the ContentTypeEnum value is valid.
+func (t ContentTypeEnum) IsValid() bool {
+	switch t {
+	case Single, Collection:
+		return true
+	}
+	return false
+}
+
+type ContentType struct {
+	ID   uint            `json:"id"`
+	Type ContentTypeEnum `json:"type" gorm:"type:varchar(20)"`
+	Name string          `json:"name"`
+}
