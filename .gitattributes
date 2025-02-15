@@ -1,0 +1,5 @@
+*.md linguist-detectable=false
+*.mdx linguist-detectable=false
+*.css linguist-detectable=false
+*.js linguist-detectable=false
+*.jsx linguist-detectable=false
