@@ -66,6 +66,11 @@ func CreateContent(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Content type not found"})
 	}
 
+	// Check if the slug already exists
+	if err := config.DB.Where("slug =?", contentType.Slug).First(&models.Content{}).Error; err == nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Slug already exists"})
+	}
+
 	content.IsCollection = contentType.Type == models.Collection
 
 	if content.IsCollection {
@@ -76,15 +81,39 @@ func CreateContent(c *fiber.Ctx) error {
 				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create collection"})
 			}
 
+			// 用于追踪已使用的 slugs
+			usedSlugs := make(map[string]bool)
+
 			for _, item := range items {
 				if itemData, ok := item.(map[string]interface{}); ok {
+					// 检查 item 是否包含 slug
+					slug, hasSlug := itemData["slug"].(string)
+					if !hasSlug || slug == "" {
+						return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Each item must have a valid slug"})
+					}
+
+					// 检查 slug 是否在当前请求中重复
+					if usedSlugs[slug] {
+						return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Duplicate slug found: " + slug})
+					}
+					usedSlugs[slug] = true
+
+					// 检查数据库中是否已存在相同的 slug
+					var existingItem models.ContentItem
+					if err := config.DB.Where("collection_id = ? AND slug = ?", content.ID, slug).First(&existingItem).Error; err == nil {
+						return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Item slug already exists: " + slug})
+					}
+
 					contentItem := models.ContentItem{
 						CollectionID: content.ID,
-						Data:         models.JSON(itemData),
+						Slug:        slug,
+						Data:        models.JSON(itemData),
 					}
+
 					if err := validateSingleContent(contentItem.Data, contentType.Fields); err != nil {
 						return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 					}
+
 					if err := config.DB.Create(&contentItem).Error; err != nil {
 						return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create content item"})
 					}
@@ -129,12 +158,29 @@ func UpdateContent(c *fiber.Ctx) error {
 			delete(updateData.Data, "items")
 			content.Data = updateData.Data
 
+			// 用于追踪已使用的 slugs
+			usedSlugs := make(map[string]bool)
+
 			for _, item := range items {
 				if itemData, ok := item.(map[string]interface{}); ok {
+					// 检查 item 是否包含 slug
+					slug, hasSlug := itemData["slug"].(string)
+					if !hasSlug || slug == "" {
+						return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Each item must have a valid slug"})
+					}
+
+					// 检查 slug 是否在当前请求中重复
+					if usedSlugs[slug] {
+						return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Duplicate slug found: " + slug})
+					}
+					usedSlugs[slug] = true
+
 					contentItem := models.ContentItem{
 						CollectionID: content.ID,
-						Data:         models.JSON(itemData),
+						Slug:        slug,
+						Data:        models.JSON(itemData),
 					}
+
 					if err := validateSingleContent(contentItem.Data, content.ContentType.Fields); err != nil {
 						return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 					}
@@ -194,4 +240,14 @@ func DeleteContent(c *fiber.Ctx) error {
 	}
 
 	return c.Status(http.StatusOK).JSON(fiber.Map{"message": "Content deleted successfully"})
+}
+
+func GetContentItemBySlug(c *fiber.Ctx) error {
+	collectionID := c.Params("collectionId")
+	slug := c.Params("slug")
+	var contentItem models.ContentItem
+	if err := config.DB.Where("collection_id =? AND slug =?", collectionID, slug).First(&contentItem).Error; err != nil {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "Content item not found"})
+	}
+	return c.Status(http.StatusOK).JSON(contentItem)
 }

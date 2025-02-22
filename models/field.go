@@ -19,10 +19,11 @@ func (t FieldType) IsValid() bool {
 }
 
 type Field struct {
-	ID            uint      `json:"id" gorm:"primaryKey;autoIncrement"`
-	Name          string    `json:"name" gorm:"not null"`
-	Type          FieldType `json:"type" gorm:"type:varchar(20)"`
-	Required      bool      `json:"required" gorm:"default:false"`
-	ContentTypeID uint      `json:"content_type_id"`
-	ContentType   ContentType
+	ID            uint        `json:"id" gorm:"primaryKey;autoIncrement"`
+	Slug          string      `json:"slug" gorm:"not null;uniqueIndex:idx_content_type_field_name"`
+	Name          string      `json:"name" gorm:"not null;uniqueIndex:idx_content_type_field_name"`
+	Type          FieldType   `json:"type" gorm:"type:varchar(20)"`
+	Required      bool        `json:"required" gorm:"default:false"`
+	ContentTypeID uint        `json:"content_type_id" gorm:"uniqueIndex:idx_content_type_field_name"`
+	ContentType   ContentType `json:"-" gorm:"foreignKey:ContentTypeID"`
 }

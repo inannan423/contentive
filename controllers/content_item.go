@@ -40,6 +40,11 @@ func CreateContentItem(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	// Check if the slug already exists
+	if err := config.DB.Where("slug =?", item.Slug).First(&models.ContentItem{}).Error; err == nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Slug already exists"})
+	}
+
 	var collection models.Content
 	if err := config.DB.Preload("ContentType.Fields").First(&collection, item.CollectionID).Error; err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Collection not found"})

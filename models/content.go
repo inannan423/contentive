@@ -9,6 +9,7 @@ import (
 
 type Content struct {
 	ID            uint          `json:"id" gorm:"primaryKey;autoIncrement"`
+	Slug          string        `json:"slug"`
 	ContentTypeID uint          `json:"content_type_id"`
 	ContentType   ContentType   `json:"content_type"`
 	Data          JSON          `json:"data" gorm:"type:jsonb"`
@@ -20,6 +21,7 @@ type Content struct {
 
 type ContentItem struct {
 	ID           uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	Slug         string    `json:"slug"`
 	CollectionID uint      `json:"collection_id"`
 	Collection   Content   `json:"-" gorm:"foreignKey:CollectionID"`
 	Data         JSON      `json:"data" gorm:"type:jsonb"`
