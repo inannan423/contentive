@@ -4,21 +4,24 @@ import (
 	"contentive/models"
 	"log"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
 
 func InitDB() {
-	dbURL := "host=" + AppConfig.DBHost + " user=" + AppConfig.DBUser + " dbname=" + AppConfig.DBName + " password=" + AppConfig.DBPassword + " port=" + AppConfig.DBPort + " sslmode=disable"
+	dsn := "host=" + AppConfig.DBHost + " user=" + AppConfig.DBUser + " dbname=" + AppConfig.DBName + " password=" + AppConfig.DBPassword + " port=" + AppConfig.DBPort + " sslmode=disable"
 
 	var err error
-	DB, err = gorm.Open("postgres", dbURL)
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("failed to connect to the database:", err)
 	}
 	log.Println("Connected to the database!")
 
-	DB.AutoMigrate(&models.ContentType{})
+	if err := DB.AutoMigrate(&models.ContentType{}, &models.Field{}, &models.Content{}, &models.ContentItem{}); err != nil {
+		log.Fatal("failed to migrate database:", err)
+	}
+	log.Println("Database migration completed!")
 }

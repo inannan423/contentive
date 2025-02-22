@@ -3,8 +3,9 @@ package controllers
 import (
 	"contentive/config"
 	"contentive/models"
-	"log"
 	"net/http"
+
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,9 +22,10 @@ func CreateContentType(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid Type value"})
 	}
 
-	log.Println(contentType)
-
 	if err := config.DB.Create(&contentType).Error; err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return c.Status(http.StatusConflict).JSON(fiber.Map{"error": "Content type name or id already exists"})
+		}
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create content type"})
 	}
 

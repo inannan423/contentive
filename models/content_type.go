@@ -17,7 +17,8 @@ func (t ContentTypeEnum) IsValid() bool {
 }
 
 type ContentType struct {
-	ID   uint            `json:"id"`
-	Type ContentTypeEnum `json:"type" gorm:"type:varchar(20)"`
-	Name string          `json:"name"`
+	ID     uint            `json:"id" gorm:"primaryKey;autoIncrement"`
+	Type   ContentTypeEnum `json:"type" gorm:"type:varchar(20)"`
+	Name   string          `json:"name" gorm:"unique"`
+	Fields []Field         `json:"fields"`
 }
