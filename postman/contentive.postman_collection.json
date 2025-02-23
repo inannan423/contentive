@@ -1,0 +1,185 @@
+{
+  "info": {
+    "name": "Contentive API",
+    "description": "API collection for Contentive Headless CMS",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Content Types",
+      "item": [
+        {
+          "name": "Get All Content Types",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content-types"]
+            }
+          }
+        },
+        {
+          "name": "Create Content Type",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/content-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content-types"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"blog_post\",\n  \"type\": \"collection\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fields",
+      "item": [
+        {
+          "name": "Add Field",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/content-types/:contentTypeId/fields",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content-types", ":contentTypeId", "fields"],
+              "variable": [
+                {
+                  "key": "contentTypeId",
+                  "value": "uuid"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"title\",\n  \"type\": \"text\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Field",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/content-types/:contentTypeId/fields/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content-types", ":contentTypeId", "fields", ":id"],
+              "variable": [
+                {
+                  "key": "contentTypeId",
+                  "value": "uuid"
+                },
+                {
+                  "key": "id",
+                  "value": "uuid"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"title\",\n  \"type\": \"text\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Field",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/content-types/:contentTypeId/fields/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content-types", ":contentTypeId", "fields", ":id"],
+              "variable": [
+                {
+                  "key": "contentTypeId",
+                  "value": "uuid"
+                },
+                {
+                  "key": "id",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content Entries",
+      "item": [
+        {
+          "name": "Create Content Entry",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/content-types/:contentTypeId/entries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content-types", ":contentTypeId", "entries"],
+              "variable": [
+                {
+                  "key": "contentTypeId",
+                  "value": "uuid"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My First Post\",\n  \"content\": \"Hello World!\",\n  \"published\": true,\n  \"publishDate\": \"2024-03-21T10:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Content Entries",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content-types/:contentTypeId/entries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content-types", ":contentTypeId", "entries"],
+              "variable": [
+                {
+                  "key": "contentTypeId",
+                  "value": "uuid"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ]
+}

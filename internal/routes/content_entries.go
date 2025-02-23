@@ -14,5 +14,15 @@ func RegisterContentEntryRoutes(app *fiber.App) {
 		middlewares.ValidateContentEntry(),
 		handlers.CreateContentEntry,
 	)
-	// TODO: Other CRUD operations
+
+	entries.Get("/", handlers.GetContentEntries)
+
+	entries.Get("/:id", handlers.GetContentEntry)
+
+	entries.Put("/:id",
+		middlewares.ValidateContentEntry(),
+		handlers.UpdateContentEntry,
+	)
+
+	entries.Delete("/:id", handlers.DeleteContentEntry)
 }

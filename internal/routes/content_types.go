@@ -19,6 +19,15 @@ func RegisterContentTypeRoutes(app *fiber.App) {
 	// GET /api/content-types - Get all content types
 	contentTypes.Get("/", handlers.GetAllContentTypes)
 
+	// GET /api/content-types/:contentTypeId - Get a content type by ID
+	contentTypes.Get("/:contentTypeId", handlers.GetContentType)
+
+	// PUT /api/content-types/:contentTypeId - Update a content type by ID
+	contentTypes.Put("/:contentTypeId",
+		middlewares.ValidateContentType(),
+		handlers.UpdateContentType,
+	)
+
 	// POST /api/content-types/:contentTypeId/fields - Add a new field to a content type
 	contentTypes.Post("/:contentTypeId/fields",
 		middlewares.ValidateField(),
@@ -32,8 +41,5 @@ func RegisterContentTypeRoutes(app *fiber.App) {
 	)
 
 	// DELETE /api/content-types/:contentTypeId/fields/:id - Delete a field from a content type
-	contentTypes.Delete("/:contentTypeId/fields/:id",
-		middlewares.ValidateField(),
-		handlers.DeleteField,
-	)
+	contentTypes.Delete("/:contentTypeId/fields/:id", handlers.DeleteField)
 }
