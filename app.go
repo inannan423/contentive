@@ -2,7 +2,7 @@ package main
 
 import (
 	"contentive/config"
-	"contentive/routes"
+	"contentive/internal/routes"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,8 +15,7 @@ func main() {
 	app := fiber.New()
 
 	routes.RegisterContentTypeRoutes(app)
-	routes.RegisterFieldRoutes(app)
-	routes.RegisterContentRoutes(app)
+	routes.RegisterContentEntryRoutes(app)
 
 	log.Fatal(app.Listen(":8080"))
 }
