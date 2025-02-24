@@ -5,7 +5,6 @@ import (
 	"contentive/internal/models"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 )
 
 func CreateContentType(c *fiber.Ctx) error {
@@ -41,19 +40,18 @@ func GetAllContentTypes(c *fiber.Ctx) error {
 }
 
 func GetContentType(c *fiber.Ctx) error {
-	contentTypeID, err := uuid.Parse(c.Params("contentTypeId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid content type ID",
-		})
-	}
+	identifier := c.Params("identifier")
 
 	var contentType models.ContentType
-	if err := config.DB.Preload("Fields").First(&contentType, "id = ?", contentTypeID).Error; err != nil {
+	query := config.DB.Preload("Fields")
+
+	// Find by slug
+	if err := query.First(&contentType, "slug = ?", identifier).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "Content type not found",
 		})
 	}
+
 	return c.JSON(contentType)
 }
 
@@ -61,25 +59,24 @@ func UpdateContentType(c *fiber.Ctx) error {
 	// Get validated content type from middleware
 	updatedType := c.Locals("contentType").(models.ContentType)
 
-	// Parse content type ID from URL
-	contentTypeID, err := uuid.Parse(c.Params("contentTypeId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid content type ID",
-		})
-	}
-
-	// Fetch existing content type
+	// Parse content type slug from URL
+	identifier := c.Params("identifier")
 	var existingType models.ContentType
-	if err := config.DB.First(&existingType, "id = ?", contentTypeID).Error; err != nil {
+	query := config.DB
+
+	// Find by slug
+	if err := query.First(&existingType, "slug = ?", identifier).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "Content type not found",
 		})
 	}
 
-	// Update only name field
+	// Update fields
 	if updatedType.Name != "" {
 		existingType.Name = updatedType.Name
+	}
+	if updatedType.Slug != "" {
+		existingType.Slug = updatedType.Slug
 	}
 
 	// Save updates
@@ -90,7 +87,7 @@ func UpdateContentType(c *fiber.Ctx) error {
 	}
 
 	// Reload content type with fields
-	if err := config.DB.Preload("Fields").First(&existingType, "id = ?", contentTypeID).Error; err != nil {
+	if err := config.DB.Preload("Fields").First(&existingType, "id = ?", existingType.ID).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to retrieve updated content type",
 		})

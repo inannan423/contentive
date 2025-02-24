@@ -14,10 +14,12 @@ func CreateContentEntry(c *fiber.Ctx) error {
 	// Get validated data from context
 	contentTypeID := c.Locals("contentTypeID").(uuid.UUID)
 	jsonData := c.Locals("jsonData").(datatypes.JSON)
+	slug := c.Locals("slug").(string)
 
 	// Create new entry
 	entry := models.ContentEntry{
 		ContentTypeID: contentTypeID,
+		Slug:          slug,
 		Data:          jsonData,
 	}
 
@@ -31,17 +33,16 @@ func CreateContentEntry(c *fiber.Ctx) error {
 }
 
 func GetContentEntries(c *fiber.Ctx) error {
-	// Parse content type ID from URL
-	contentTypeID, err := uuid.Parse(c.Params("contentTypeId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid content type ID",
+	identifier := c.Params("identifier")
+	var contentType models.ContentType
+	if err := config.DB.First(&contentType, "slug = ?", identifier).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "Content type not found",
 		})
 	}
 
-	// Fetch all entries for the content type
 	var entries []models.ContentEntry
-	if err := config.DB.Where("content_type_id = ?", contentTypeID).Find(&entries).Error; err != nil {
+	if err := config.DB.Where("content_type_id = ?", contentType.ID).Find(&entries).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to retrieve content entries",
 		})
@@ -51,19 +52,21 @@ func GetContentEntries(c *fiber.Ctx) error {
 }
 
 func GetContentEntry(c *fiber.Ctx) error {
-	// Parse entry ID from URL
-	entryID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid content entry ID",
+	identifier := c.Params("identifier")
+	var contentType models.ContentType
+	if err := config.DB.First(&contentType, "slug = ?", identifier).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "Content type not found",
 		})
 	}
 
-	// Fetch the entry
+	slug := c.Params("slug")
+
+	// Fetch the entry by slug
 	var entry models.ContentEntry
-	if err := config.DB.Where("id = ?", entryID).First(&entry).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to retrieve content entry",
+	if err := config.DB.Where("content_type_id = ? AND slug = ?", contentType.ID, slug).First(&entry).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "Content entry not found",
 		})
 	}
 
@@ -73,26 +76,18 @@ func GetContentEntry(c *fiber.Ctx) error {
 func UpdateContentEntry(c *fiber.Ctx) error {
 	// Get validated data from context
 	contentTypeID := c.Locals("contentTypeID").(uuid.UUID)
-	entryID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid content entry ID",
-		})
-	}
+	currentSlug := c.Params("slug")
 
-	// Fetch existing entry
+	// Fetch existing entry by slug
 	var entry models.ContentEntry
-	if err := config.DB.Where("id = ?", entryID).First(&entry).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to retrieve content entry",
+	if err := config.DB.Where("content_type_id = ? AND slug = ?", contentTypeID, currentSlug).First(&entry).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "Content entry not found",
 		})
 	}
 
-	// Verify entry belongs to the specified content type
-	if entry.ContentTypeID != contentTypeID {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Content entry does not belong to the specified content type",
-		})
+	if newSlug, ok := c.Locals("slug").(string); ok && newSlug != "" && newSlug != currentSlug {
+		entry.Slug = newSlug
 	}
 
 	// Parse existing data
@@ -137,23 +132,23 @@ func UpdateContentEntry(c *fiber.Ctx) error {
 }
 
 func DeleteContentEntry(c *fiber.Ctx) error {
-	// Parse entry ID from URL
-	entryID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid content entry ID",
+	identifier := c.Params("identifier")
+	var contentType models.ContentType
+	if err := config.DB.First(&contentType, "slug = ?", identifier).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "Content type not found",
 		})
 	}
 
-	// Fetch the entry
+	slug := c.Params("slug")
+
 	var entry models.ContentEntry
-	if err := config.DB.Where("id = ?", entryID).First(&entry).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to retrieve content entry",
+	if err := config.DB.Where("content_type_id = ? AND slug = ?", contentType.ID, slug).First(&entry).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "Content entry not found",
 		})
 	}
 
-	// Delete the entry
 	if err := config.DB.Delete(&entry).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to delete content entry",

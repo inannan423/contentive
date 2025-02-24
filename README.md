@@ -17,6 +17,13 @@ To install Contentive, you will need to have Go and PostgreSQL installed on your
 
 ### Content Types
 
+#### Get Content Type
+
+- **URL**: `/api/content-types/:identifier`
+- **Method**: `GET`
+- **Parameters**:
+  - `identifier`: Content Type ID or slug
+
 #### Create Content Type
 
 - **URL**: `/api/content-types`

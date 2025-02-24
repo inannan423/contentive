@@ -14,17 +14,10 @@ import (
 
 func ValidateContentEntry() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Parse content type ID from URL parameter
-		contentTypeID, err := uuid.Parse(c.Params("contentTypeId"))
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{
-				"error": "Invalid content type ID",
-			})
-		}
-
-		// Load content type with its fields
+		// 通过 slug 获取 content type
+		identifier := c.Params("identifier")
 		var contentType models.ContentType
-		if err := config.DB.Preload("Fields").First(&contentType, "id = ?", contentTypeID).Error; err != nil {
+		if err := config.DB.Preload("Fields").First(&contentType, "slug = ?", identifier).Error; err != nil {
 			return c.Status(404).JSON(fiber.Map{
 				"error": "Content type not found",
 			})
@@ -41,7 +34,7 @@ func ValidateContentEntry() fiber.Handler {
 		// Check Single type constraint
 		if contentType.Type == string(models.Single) {
 			var count int64
-			if err := config.DB.Model(&models.ContentEntry{}).Where("content_type_id = ?", contentTypeID).Count(&count).Error; err != nil {
+			if err := config.DB.Model(&models.ContentEntry{}).Where("content_type_id = ?", contentType.ID).Count(&count).Error; err != nil {
 				return c.Status(500).JSON(fiber.Map{
 					"error": "Failed to check existing entries",
 				})
@@ -62,6 +55,10 @@ func ValidateContentEntry() fiber.Handler {
 
 		// Validate provided fields
 		for fieldName, value := range data {
+			if fieldName == "slug" {
+				continue // Skip validation for slug field
+			}
+
 			fieldType, exists := fieldTypes[fieldName]
 			if !exists {
 				return c.Status(400).JSON(fiber.Map{
@@ -142,6 +139,65 @@ func ValidateContentEntry() fiber.Handler {
 			}
 		}
 
+		// Validate slug for POST requests
+		if c.Method() == "POST" {
+			slug, ok := data["slug"].(string)
+			if !ok || slug == "" {
+				return c.Status(400).JSON(fiber.Map{
+					"error": "Slug is required",
+				})
+			}
+
+			// Validate slug format
+			if !isValidSlug(slug) {
+				return c.Status(400).JSON(fiber.Map{
+					"error": "Invalid slug format. Use only lowercase letters, numbers, and hyphens",
+				})
+			}
+
+			// Check slug uniqueness within content type
+			var existingEntry models.ContentEntry
+			if err := config.DB.Where("content_type_id = ? AND slug = ?", contentType.ID, slug).First(&existingEntry).Error; err == nil {
+				return c.Status(400).JSON(fiber.Map{
+					"error": "An entry with this slug already exists",
+				})
+			}
+
+			c.Locals("slug", slug)
+			delete(data, "slug") // Remove slug from data to avoid storing it twice
+		}
+
+		// For PUT requests, validate slug if provided
+		if c.Method() == "PUT" {
+			if slug, ok := data["slug"].(string); ok {
+				if slug == "" {
+					return c.Status(400).JSON(fiber.Map{
+						"error": "Slug cannot be empty",
+					})
+				}
+
+				if !isValidSlug(slug) {
+					return c.Status(400).JSON(fiber.Map{
+						"error": "Invalid slug format. Use only lowercase letters, numbers, and hyphens",
+					})
+				}
+
+				// Check slug uniqueness, excluding current entry
+				currentSlug := c.Params("slug")
+				if slug != currentSlug {
+					var existingEntry models.ContentEntry
+					if err := config.DB.Where("content_type_id = ? AND slug = ? AND slug != ?", contentType.ID, slug, currentSlug).First(&existingEntry).Error; err == nil {
+						return c.Status(400).JSON(fiber.Map{
+							"error": "An entry with this slug already exists",
+						})
+					}
+				}
+
+				c.Locals("slug", slug)
+				delete(data, "slug") // Remove slug from data to avoid storing it twice
+			}
+		}
+
 		jsonData, err := json.Marshal(data)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{
@@ -149,7 +205,7 @@ func ValidateContentEntry() fiber.Handler {
 			})
 		}
 
-		c.Locals("contentTypeID", contentTypeID)
+		c.Locals("contentTypeID", contentType.ID)
 		c.Locals("jsonData", datatypes.JSON(jsonData))
 		return c.Next()
 	}

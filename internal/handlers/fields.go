@@ -28,23 +28,25 @@ func UpdateField(c *fiber.Ctx) error {
 	fieldID := c.Locals("fieldID").(uuid.UUID)
 	contentTypeID := c.Locals("contentTypeID").(uuid.UUID)
 
-	if err := config.DB.Where("id = ? AND content_type_id = ?", fieldID, contentTypeID).First(&models.Field{}).Error; err != nil {
+	var existingField models.Field
+	if err := config.DB.Where("id = ? AND content_type_id = ?", fieldID, contentTypeID).First(&existingField).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "Field not found or does not belong to this content type",
 		})
 	}
 
-	// Update the fields
-	if err := config.DB.Model(&models.Field{}).Where("id = ?", fieldID).Updates(map[string]interface{}{
-		"label": field.Label,
-		"type":  field.Type,
-	}).Error; err != nil {
+	if field.Type != "" && field.Type != existingField.Type {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Field type cannot be changed after creation",
+		})
+	}
+
+	if err := config.DB.Model(&models.Field{}).Where("id = ?", fieldID).Update("label", field.Label).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to update field",
 		})
 	}
 
-	// Retrieve the updated field
 	var updatedField models.Field
 	if err := config.DB.Where("id = ?", fieldID).First(&updatedField).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -56,10 +58,11 @@ func UpdateField(c *fiber.Ctx) error {
 }
 
 func DeleteField(c *fiber.Ctx) error {
-	contentTypeID, err := uuid.Parse(c.Params("contentTypeId"))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid content type ID",
+	identifier := c.Params("identifier")
+	var contentType models.ContentType
+	if err := config.DB.First(&contentType, "slug = ?", identifier).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "Content type not found",
 		})
 	}
 
@@ -71,7 +74,7 @@ func DeleteField(c *fiber.Ctx) error {
 	}
 
 	var field models.Field
-	if err := config.DB.Where("id = ? AND content_type_id = ?", fieldID, contentTypeID).First(&field).Error; err != nil {
+	if err := config.DB.Where("id = ? AND content_type_id = ?", fieldID, contentType.ID).First(&field).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "Field not found or does not belong to this content type",
 		})

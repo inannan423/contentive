@@ -15,6 +15,7 @@ const (
 
 type ContentType struct {
 	ID        uuid.UUID `gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	Slug      string    `json:"slug" gorm:"unique;not null"`
 	Name      string    `json:"name" gorm:"not null"`
 	Type      string    `json:"type" gorm:"not null"`
 	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
