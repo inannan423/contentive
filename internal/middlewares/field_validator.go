@@ -50,6 +50,10 @@ func ValidateField() fiber.Handler {
 				})
 			}
 
+			if c.Method() == "POST" && !field.Required {
+				field.Required = false
+			}
+
 			validTypes := map[models.FieldTypeEnum]bool{
 				models.Text:     true,
 				models.RichText: true,

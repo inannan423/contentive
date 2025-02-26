@@ -23,6 +23,7 @@ type Field struct {
 	ContentTypeID uuid.UUID     `gorm:"type:uuid;not null"`
 	Label         string        `gorm:"not null"`
 	Type          FieldTypeEnum `gorm:"not null"`
+	Required      bool          `gorm:"not null"`
 	CreatedAt     time.Time     `gorm:"autoCreateTime"`
 	UpdatedAt     time.Time     `gorm:"autoUpdateTime"`
 }

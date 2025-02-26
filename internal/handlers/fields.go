@@ -41,7 +41,12 @@ func UpdateField(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := config.DB.Model(&models.Field{}).Where("id = ?", fieldID).Update("label", field.Label).Error; err != nil {
+	updates := map[string]interface{}{
+		"label":    field.Label,
+		"required": field.Required,
+	}
+
+	if err := config.DB.Model(&models.Field{}).Where("id = ?", fieldID).Updates(updates).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to update field",
 		})

@@ -131,10 +131,12 @@ func ValidateContentEntry() fiber.Handler {
 		// For POST requests, ensure all required fields are present
 		if c.Method() == "POST" {
 			for _, field := range contentType.Fields {
-				if _, exists := data[field.Label]; !exists {
-					return c.Status(400).JSON(fiber.Map{
-						"error": fmt.Sprintf("Field '%s' is required", field.Label),
-					})
+				if field.Required {
+					if _, exists := data[field.Label]; !exists || data[field.Label] == nil {
+						return c.Status(400).JSON(fiber.Map{
+							"error": fmt.Sprintf("Field '%s' is required", field.Label),
+						})
+					}
 				}
 			}
 		}

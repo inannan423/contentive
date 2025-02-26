@@ -13,6 +13,7 @@ type Config struct {
 	DBName     string
 	DBHost     string
 	DBPort     string
+	JWTSecret  string
 }
 
 var AppConfig Config
@@ -29,6 +30,7 @@ func InitConfig() {
 		DBName:     os.Getenv("DB_NAME"),
 		DBHost:     os.Getenv("DB_HOST"),
 		DBPort:     os.Getenv("DB_PORT"),
+		JWTSecret:  os.Getenv("JWT_SECRET"),
 	}
 
 	log.Println("Configuration loaded successfully!")

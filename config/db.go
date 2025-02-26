@@ -56,7 +56,15 @@ func InitDB() {
 	// }
 	// log.Println("Existing tables dropped!")
 
-	if err := DB.AutoMigrate(&models.ContentType{}, &models.Field{}, &models.ContentEntry{}); err != nil {
+	if err := DB.AutoMigrate(
+		&models.ContentType{},
+		&models.Field{},
+		&models.ContentEntry{},
+		&models.User{},
+		&models.Role{},
+		&models.Permission{},
+		&models.AuditLog{},
+	); err != nil {
 		log.Fatal("failed to migrate database:", err)
 	}
 	log.Println("Database migration completed!")

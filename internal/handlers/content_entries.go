@@ -4,6 +4,8 @@ import (
 	"contentive/config"
 	"contentive/internal/models"
 	"encoding/json"
+	"fmt"
+	"math"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -33,22 +35,73 @@ func CreateContentEntry(c *fiber.Ctx) error {
 }
 
 func GetContentEntries(c *fiber.Ctx) error {
+	// Get pagination parameters from query
+	page := c.QueryInt("page", 1)
+	pageSize := c.QueryInt("pageSize", 10)
+	sortBy := c.Query("sortBy", "created_at") // Default sort by created_at
+	sortOrder := c.Query("sortOrder", "desc") // Default sort order is descending
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+
+	// Validate sort order
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	// Get content type by identifier with fields
 	identifier := c.Params("identifier")
 	var contentType models.ContentType
-	if err := config.DB.First(&contentType, "slug = ?", identifier).Error; err != nil {
+	if err := config.DB.Preload("Fields").First(&contentType, "slug = ?", identifier).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": "Content type not found",
 		})
 	}
 
+	// Count total entries
+	var total int64
+	if err := config.DB.Model(&models.ContentEntry{}).Where("content_type_id = ?", contentType.ID).Count(&total).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to count entries",
+		})
+	}
+
+	// Build order clause
+	orderClause := fmt.Sprintf("%s %s", sortBy, sortOrder)
+
+	// Get paginated entries
 	var entries []models.ContentEntry
-	if err := config.DB.Where("content_type_id = ?", contentType.ID).Find(&entries).Error; err != nil {
+	if err := config.DB.Where("content_type_id = ?", contentType.ID).
+		Limit(pageSize).
+		Offset((page - 1) * pageSize).
+		Order(orderClause).
+		Find(&entries).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "Failed to retrieve content entries",
 		})
 	}
 
-	return c.Status(200).JSON(entries)
+	// Calculate total pages
+	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
+
+	// Return paginated response with sort info and content type
+	return c.Status(200).JSON(fiber.Map{
+		"contentType": contentType,
+		"data":        entries,
+		"pagination": fiber.Map{
+			"current":  page,
+			"pageSize": pageSize,
+			"total":    total,
+			"pages":    totalPages,
+		},
+		"sort": fiber.Map{
+			"field": sortBy,
+			"order": sortOrder,
+		},
+	})
 }
 
 func GetContentEntry(c *fiber.Ctx) error {
