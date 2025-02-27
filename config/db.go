@@ -56,6 +56,7 @@ func InitDB() {
 	// }
 	// log.Println("Existing tables dropped!")
 
+	// Migrate the schema
 	if err := DB.AutoMigrate(
 		&models.ContentType{},
 		&models.Field{},

@@ -2,6 +2,7 @@ package main
 
 import (
 	"contentive/config"
+	"contentive/internal/bootstrap"
 	"contentive/internal/routes"
 	"log"
 
@@ -12,8 +13,11 @@ func main() {
 	config.InitConfig()
 	config.InitDB()
 
+	bootstrap.InitRolesAndPermissions()
+
 	app := fiber.New()
 
+	routes.RegisterUserRoutes(app)
 	routes.RegisterContentTypeRoutes(app)
 	routes.RegisterContentEntryRoutes(app)
 
