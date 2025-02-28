@@ -25,7 +25,7 @@ func Login(c *fiber.Ctx) error {
 
 	// Cannot find user
 	var user models.User
-	if err := config.DB.Preload("Role").Where("email = ?", input.Email).First(&user).Error; err != nil {
+	if err := config.DB.Preload("Role.Permissions").Where("email = ?", input.Email).First(&user).Error; err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
@@ -96,16 +96,45 @@ func CreateUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(user)
+	if err := config.DB.Preload("Role.Permissions").First(&user, user.ID).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to load user data"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"id":         user.ID,
+		"username":   user.Username,
+		"email":      user.Email,
+		"role_id":    user.RoleID,
+		"role":       user.Role,
+		"active":     user.Active,
+		"last_login": user.LastLogin,
+		"created_at": user.CreatedAt,
+		"updated_at": user.UpdatedAt,
+	})
 }
 
 func GetUsers(c *fiber.Ctx) error {
 	var users []models.User
-	if err := config.DB.Preload("Role").Find(&users).Error; err != nil {
+	if err := config.DB.Preload("Role.Permissions").Find(&users).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch users"})
 	}
 
-	return c.JSON(users)
+	var safeUsers []fiber.Map
+	for _, user := range users {
+		safeUsers = append(safeUsers, fiber.Map{
+			"id":         user.ID,
+			"username":   user.Username,
+			"email":      user.Email,
+			"role_id":    user.RoleID,
+			"role":       user.Role,
+			"active":     user.Active,
+			"last_login": user.LastLogin,
+			"created_at": user.CreatedAt,
+			"updated_at": user.UpdatedAt,
+		})
+	}
+
+	return c.JSON(safeUsers)
 }
 
 func UpdateUser(c *fiber.Ctx) error {
@@ -155,5 +184,19 @@ func UpdateUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user"})
 	}
 
-	return c.JSON(user)
+	if err := config.DB.Preload("Role.Permissions").First(&user, user.ID).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to load updated user data"})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":         user.ID,
+		"username":   user.Username,
+		"email":      user.Email,
+		"role_id":    user.RoleID,
+		"role":       user.Role,
+		"active":     user.Active,
+		"last_login": user.LastLogin,
+		"created_at": user.CreatedAt,
+		"updated_at": user.UpdatedAt,
+	})
 }

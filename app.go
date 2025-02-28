@@ -14,12 +14,14 @@ func main() {
 	config.InitDB()
 
 	bootstrap.InitRolesAndPermissions()
+	bootstrap.InitSuperAdmin()
 
 	app := fiber.New()
 
 	routes.RegisterUserRoutes(app)
 	routes.RegisterContentTypeRoutes(app)
 	routes.RegisterContentEntryRoutes(app)
+	routes.RegisterRoleRoutes(app)
 
 	log.Fatal(app.Listen(":8080"))
 }

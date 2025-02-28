@@ -8,11 +8,11 @@ import (
 )
 
 type User struct {
-	ID        uint      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
 	Username  string    `gorm:"unique;not null"`
 	Email     string    `gorm:"unique;not null"`
 	Password  string    `gorm:"not null"`
-	RoleID    uuid.UUID `gorm:"type:uuid";not null`
+	RoleID    uuid.UUID `gorm:"type:uuid;not null"`
 	Role      Role      `gorm:"foreignKey:RoleID"`
 	Active    bool      `gorm:"default:true"`
 	LastLogin time.Time

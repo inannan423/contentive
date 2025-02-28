@@ -16,7 +16,7 @@ func AuthMiddleware() fiber.Handler {
 		authHeader := c.Get("Authorization")
 
 		if authHeader == "" {
-			return c.Status(401).JSON(fiber.Map{
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "No Authorization header provided",
 			})
 		}
@@ -24,7 +24,7 @@ func AuthMiddleware() fiber.Handler {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		// If the token string is the same as the original header, it means the prefix was not found
 		if tokenString == authHeader {
-			return c.Status(401).JSON(fiber.Map{
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid Authorization header format",
 			})
 		}
@@ -35,7 +35,7 @@ func AuthMiddleware() fiber.Handler {
 		})
 
 		if err != nil || !token.Valid {
-			return c.Status(401).JSON(fiber.Map{
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Invalid or expired token",
 			})
 		}
@@ -47,13 +47,13 @@ func AuthMiddleware() fiber.Handler {
 
 		var user models.User
 		if err := config.DB.Preload("Role.Permissions").First(&user, "id = ?", userID).Error; err != nil {
-			return c.Status(401).JSON(fiber.Map{
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Use not found",
 			})
 		}
 
 		// Set the user in the context
-		c.Locals("user", user)
+		c.Locals("user", &user)
 		return c.Next() // continue to the next handler
 	}
 }

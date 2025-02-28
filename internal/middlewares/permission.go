@@ -28,7 +28,7 @@ func RequirePermission(permissionType models.PermissionType) fiber.Handler {
 
 		// If the user does not have the required permission, return a 403 Forbidden response
 		if !hasPermission {
-			return c.Status(403).JSON(fiber.Map{
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": "Permission denied",
 			})
 		}

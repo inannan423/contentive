@@ -12,7 +12,7 @@ func RegisterUserRoutes(app *fiber.App) {
 	auth := app.Group("/api/auth")
 	auth.Post("/login", handlers.Login)
 
-	users := app.Group("/api/users")
+	users := app.Group("/admin/users")
 	users.Use(middlewares.AuthMiddleware())
 
 	users.Post("/",

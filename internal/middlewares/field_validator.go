@@ -13,7 +13,7 @@ func ValidateField() fiber.Handler {
 		identifier := c.Params("identifier")
 		var contentType models.ContentType
 		if err := config.DB.First(&contentType, "slug = ?", identifier).Error; err != nil {
-			return c.Status(404).JSON(fiber.Map{
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": "Content type not found",
 			})
 		}
@@ -23,7 +23,7 @@ func ValidateField() fiber.Handler {
 		if fieldID := c.Params("id"); fieldID != "" {
 			uid, err := uuid.Parse(fieldID)
 			if err != nil {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Invalid field ID",
 				})
 			}
@@ -33,19 +33,19 @@ func ValidateField() fiber.Handler {
 		if c.Method() != "DELETE" {
 			var field models.Field
 			if err := c.BodyParser(&field); err != nil {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Invalid request body",
 				})
 			}
 
 			if field.Label == "" {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Label cannot be empty",
 				})
 			}
 
 			if field.Type == "" {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Type cannot be empty",
 				})
 			}
@@ -65,7 +65,7 @@ func ValidateField() fiber.Handler {
 			}
 
 			if !validTypes[field.Type] {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Invalid field type",
 				})
 			}

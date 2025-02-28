@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"contentive/config"
 	"contentive/internal/models"
+	"contentive/internal/utils"
+	"fmt"
 	"log"
 )
 
@@ -66,8 +68,18 @@ func InitRolesAndPermissions() {
 	}
 
 	for _, p := range permissions {
-		if err := config.DB.Where(models.Permission{Type: p.Type}).FirstOrCreate(&p).Error; err != nil {
-			log.Printf("Error creating permission %s: %v", p.Name, err)
+		var existingPermission models.Permission
+		if err := config.DB.Where(models.Permission{Type: p.Type}).First(&existingPermission).Error; err != nil {
+			if err := config.DB.Create(&p).Error; err != nil {
+				log.Printf("Error creating permission %s: %v", p.Name, err)
+				continue
+			}
+		} else {
+			existingPermission.Name = p.Name
+			existingPermission.Description = p.Description
+			if err := config.DB.Save(&existingPermission).Error; err != nil {
+				log.Printf("Error updating permission %s: %v", p.Name, err)
+			}
 		}
 	}
 
@@ -114,9 +126,19 @@ func InitRolesAndPermissions() {
 
 	for _, r := range roles {
 		var existingRole models.Role
-		if err := config.DB.Where(models.Role{Type: r.Type}).FirstOrCreate(&existingRole).Error; err != nil {
-			log.Printf("Error creating role %s: %v", r.Name, err)
-			continue
+		if err := config.DB.Where(models.Role{Type: r.Type}).First(&existingRole).Error; err != nil {
+			if err := config.DB.Create(&r).Error; err != nil {
+				log.Printf("Error creating role %s: %v", r.Name, err)
+				continue
+			}
+			existingRole = r
+		} else {
+			existingRole.Name = r.Name
+			existingRole.Description = r.Description
+			if err := config.DB.Save(&existingRole).Error; err != nil {
+				log.Printf("Error updating role %s: %v", r.Name, err)
+				continue
+			}
 		}
 
 		if err := config.DB.Model(&existingRole).Association("Permissions").Replace(r.Permissions); err != nil {
@@ -137,4 +159,57 @@ func filterPermissions(allPermissions []models.Permission, types []models.Permis
 		}
 	}
 	return filtered
+}
+
+func InitSuperAdmin() {
+	var count int64
+	if err := config.DB.Model(&models.User{}).
+		Joins("JOIN roles ON users.role_id = roles.id").
+		Where("roles.type = ?", models.SuperAdmin).
+		Count(&count).Error; err != nil {
+		log.Printf("Error checking super admin existence: %v", err)
+		return
+	}
+
+	if count > 0 {
+		return
+	}
+
+	var superAdminRole models.Role
+	if err := config.DB.Where("type = ?", models.SuperAdmin).First(&superAdminRole).Error; err != nil {
+		log.Printf("Error finding super admin role: %v", err)
+		return
+	}
+
+	password, err := utils.GenerateSecurePassword()
+	if err != nil {
+		log.Printf("Error generating password: %v", err)
+		return
+	}
+
+	superAdmin := models.User{
+		Username: "admin",
+		Email:    "admin@example.com",
+		Password: password,
+		RoleID:   superAdminRole.ID,
+		Active:   true,
+	}
+
+	if err := superAdmin.HashPassword(); err != nil {
+		log.Printf("Error hashing password: %v", err)
+		return
+	}
+
+	if err := config.DB.Create(&superAdmin).Error; err != nil {
+		log.Printf("Error creating super admin: %v", err)
+		return
+	}
+
+	fmt.Println("\n🌟 Initial Admin Account 🌟")
+	fmt.Println("👨 Username: admin")
+	fmt.Println("📧 Email: admin@example.com")
+	fmt.Printf("🔒 Password: %-14s\n", password)
+	fmt.Println("\n🚀 Please login and change your password immediately! ")
+	fmt.Println("🔐 This information will only be output once, so please keep it safe. ")
+	fmt.Println()
 }

@@ -13,7 +13,7 @@ func ValidateContentType() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var contentType models.ContentType
 		if err := c.BodyParser(&contentType); err != nil {
-			return c.Status(400).JSON(fiber.Map{
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Invalid request body",
 			})
 		}
@@ -22,7 +22,7 @@ func ValidateContentType() fiber.Handler {
 		if c.Method() == "PUT" {
 			// Check if request body is empty
 			if contentType.Name == "" && contentType.Type == "" && contentType.Slug == "" {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "At least one field must be provided for update",
 				})
 			}
@@ -34,14 +34,14 @@ func ValidateContentType() fiber.Handler {
 			// Try to find by UUID first
 			if uid, err := uuid.Parse(identifier); err == nil {
 				if err := config.DB.First(&existingType, "id = ?", uid).Error; err != nil {
-					return c.Status(404).JSON(fiber.Map{
+					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 						"error": "Content type not found",
 					})
 				}
 			} else {
 				// If not UUID, try to find by slug
 				if err := config.DB.First(&existingType, "slug = ?", identifier).Error; err != nil {
-					return c.Status(404).JSON(fiber.Map{
+					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 						"error": "Content type not found",
 					})
 				}
@@ -58,7 +58,7 @@ func ValidateContentType() fiber.Handler {
 			if contentType.Name != "" && contentType.Name != existingType.Name {
 				var duplicateName models.ContentType
 				if err := config.DB.Where("name = ? AND id != ?", contentType.Name, existingType.ID).First(&duplicateName).Error; err == nil {
-					return c.Status(400).JSON(fiber.Map{
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "Content type with this name already exists",
 					})
 				}
@@ -68,14 +68,14 @@ func ValidateContentType() fiber.Handler {
 			if contentType.Slug != "" && contentType.Slug != existingType.Slug {
 				// Validate slug format
 				if !isValidSlug(contentType.Slug) {
-					return c.Status(400).JSON(fiber.Map{
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "Invalid slug format. Use only lowercase letters, numbers, and hyphens",
 					})
 				}
 
 				var duplicateSlug models.ContentType
 				if err := config.DB.Where("slug = ? AND id != ?", contentType.Slug, existingType.ID).First(&duplicateSlug).Error; err == nil {
-					return c.Status(400).JSON(fiber.Map{
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 						"error": "Content type with this slug already exists",
 					})
 				}
@@ -86,20 +86,20 @@ func ValidateContentType() fiber.Handler {
 		} else {
 			// For POST requests, validate required fields
 			if contentType.Name == "" {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Name is required",
 				})
 			}
 
 			// Validate slug presence and format
 			if contentType.Slug == "" {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Slug is required",
 				})
 			}
 
 			if !isValidSlug(contentType.Slug) {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Invalid slug format. Use only lowercase letters, numbers, and hyphens",
 				})
 			}
@@ -107,14 +107,14 @@ func ValidateContentType() fiber.Handler {
 			// Check slug uniqueness for new content types
 			var existingSlug models.ContentType
 			if err := config.DB.Where("slug = ?", contentType.Slug).First(&existingSlug).Error; err == nil {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Content type with this slug already exists",
 				})
 			}
 
 			// Validate type for new content types
 			if contentType.Type != string(models.Single) && contentType.Type != string(models.Collection) {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Type must be 'single' or 'collection'",
 				})
 			}
@@ -122,7 +122,7 @@ func ValidateContentType() fiber.Handler {
 			// Check name uniqueness for new content types
 			var existingType models.ContentType
 			if err := config.DB.Where("name = ?", contentType.Name).First(&existingType).Error; err == nil {
-				return c.Status(400).JSON(fiber.Map{
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Content type with this name already exists",
 				})
 			}
