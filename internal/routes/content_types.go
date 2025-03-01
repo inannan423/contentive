@@ -55,7 +55,7 @@ func RegisterContentTypeRoutes(app *fiber.App) {
 
 	// API routes
 	contentTypesAPI := app.Group("/api/content-types")
-	contentTypesAPI.Use(middlewares.AuthMiddleware())
+	contentTypesAPI.Use(middlewares.APIAuthMiddleware())
 
 	contentTypesAPI.Post("/",
 		middlewares.APIPermissionMiddleware(models.CreateOperation),
