@@ -65,6 +65,8 @@ func InitDB() {
 		&models.Role{},
 		&models.Permission{},
 		&models.AuditLog{},
+		&models.APIRole{},
+		&models.APIPermission{},
 	); err != nil {
 		log.Fatal("failed to migrate database:", err)
 	}

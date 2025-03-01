@@ -9,7 +9,7 @@ import (
 )
 
 func RegisterUserRoutes(app *fiber.App) {
-	auth := app.Group("/api/auth")
+	auth := app.Group("/admin/auth")
 	auth.Post("/login", handlers.Login)
 
 	users := app.Group("/admin/users")

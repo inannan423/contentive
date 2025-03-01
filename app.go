@@ -15,6 +15,8 @@ func main() {
 
 	bootstrap.InitRolesAndPermissions()
 	bootstrap.InitSuperAdmin()
+	bootstrap.InitAPIRoles()
+	bootstrap.InitDefaultAPIPermissions()
 
 	app := fiber.New()
 
@@ -22,6 +24,7 @@ func main() {
 	routes.RegisterContentTypeRoutes(app)
 	routes.RegisterContentEntryRoutes(app)
 	routes.RegisterRoleRoutes(app)
+	routes.RegisterAPIRoleRoutes(app)
 
 	log.Fatal(app.Listen(":8080"))
 }

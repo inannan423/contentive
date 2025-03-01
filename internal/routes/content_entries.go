@@ -44,4 +44,35 @@ func RegisterContentEntryRoutes(app *fiber.App) {
 		middlewares.RequirePermission(models.DeleteContent),
 		handlers.DeleteContentEntry,
 	)
+
+	// API routes
+	apiEntries := app.Group("/api/content-types/:identifier/entries")
+	apiEntries.Use(middlewares.APIAuthMiddleware())
+
+	apiEntries.Post("/",
+		middlewares.APIPermissionMiddleware(models.CreateOperation),
+		middlewares.ValidateContentEntry(),
+		handlers.CreateContentEntry,
+	)
+
+	apiEntries.Get("/",
+		middlewares.APIPermissionMiddleware(models.ReadOperation),
+		handlers.GetContentEntries,
+	)
+
+	apiEntries.Get("/:slug",
+		middlewares.APIPermissionMiddleware(models.ReadOperation),
+		handlers.GetContentEntry,
+	)
+
+	apiEntries.Put("/:slug",
+		middlewares.APIPermissionMiddleware(models.UpdateOperation),
+		middlewares.ValidateContentEntry(),
+		handlers.UpdateContentEntry,
+	)
+
+	apiEntries.Delete("/:slug",
+		middlewares.APIPermissionMiddleware(models.DeleteOperation),
+		handlers.DeleteContentEntry,
+	)
 }
