@@ -1,6 +1,4 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import React from "react";
@@ -17,7 +15,6 @@ const geistMono = Geist_Mono({
 });
 
 export default function Schema() {
-  const router = useRouter();
   const { user, loading, logout } = useAuth();
 
   if (loading) {

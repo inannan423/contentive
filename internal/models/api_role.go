@@ -21,6 +21,7 @@ type APIRole struct {
 	Description string
 	APIKey      string          `gorm:"unique"`
 	IsSystem    bool            `gorm:"default:false"` // System roles cannot be deleted
+	ExpiresAt   *time.Time      `gorm:"default:null"`
 	CreatedAt   time.Time       `gorm:"autoCreateTime"`
 	UpdatedAt   time.Time       `gorm:"autoUpdateTime"`
 	Permissions []APIPermission `gorm:"foreignKey:APIRoleID"`

@@ -4,13 +4,15 @@ import (
 	"contentive/config"
 	"contentive/internal/models"
 	"contentive/internal/utils"
+	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func GetAPIRoles(c *fiber.Ctx) error {
 	var roles []models.APIRole
-	if err := config.DB.Find(&roles).Error; err != nil {
+	if err := config.DB.Preload("Permissions.ContentType").Find(&roles).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to fetch roles",
 		})
@@ -33,8 +35,9 @@ func GetAPIRole(c *fiber.Ctx) error {
 
 func CreateAPIRole(c *fiber.Ctx) error {
 	var input struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
+		Name        string     `json:"name"`
+		Description string     `json:"description"`
+		ExpiresAt   *time.Time `json:"expires_at"`
 	}
 
 	if err := c.BodyParser(&input); err != nil {
@@ -56,6 +59,7 @@ func CreateAPIRole(c *fiber.Ctx) error {
 		Description: input.Description,
 		APIKey:      apiKey,
 		IsSystem:    false,
+		ExpiresAt:   input.ExpiresAt,
 	}
 
 	if err := config.DB.Create(&role).Error; err != nil {
@@ -83,8 +87,9 @@ func UpdateAPIRole(c *fiber.Ctx) error {
 	}
 
 	var input struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
+		Name        string     `json:"name"`
+		Description string     `json:"description"`
+		ExpiresAt   *time.Time `json:"expires_at"`
 	}
 
 	if err := c.BodyParser(&input); err != nil {
@@ -93,14 +98,17 @@ func UpdateAPIRole(c *fiber.Ctx) error {
 		})
 	}
 
-	if input.Name != "" {
+	if input.Name != "" && input.Name != role.Name {
 		role.Name = input.Name
 	}
 	if input.Description != "" {
 		role.Description = input.Description
 	}
+	// Update expires_at even if it's nil (to remove expiration)
+	role.ExpiresAt = input.ExpiresAt
 
 	if err := config.DB.Save(&role).Error; err != nil {
+		log.Printf("Error updating role: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to update role",
 		})

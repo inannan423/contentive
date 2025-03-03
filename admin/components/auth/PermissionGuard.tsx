@@ -12,21 +12,35 @@ export default function PermissionGuard({ children, requiredRole }: PermissionGu
   const router = useRouter();
   const { user, loading } = useAuth();
 
-  // If still loading, show nothing
-  if (loading) return null;
+  // If still loading, show loading state with full height
+  if (loading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <p className="text-black dark:text-white">Loading...</p>
+      </div>
+    );
+  }
 
   // If no user is logged in, redirect to login
   if (!user) {
     router.push('/auth/login');
-    return null;
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <p className="text-black dark:text-white">Redirecting...</p>
+      </div>
+    );
   }
 
   // If a specific role is required and user doesn't have it, redirect to home
   if (requiredRole && user.role !== requiredRole) {
     router.push('/');
-    return null;
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <p className="text-black dark:text-white">Access denied. Redirecting...</p>
+      </div>
+    );
   }
 
-  // If all checks pass, render the children
-  return <React.Fragment>{children}</React.Fragment>;
+  // If all checks pass, render the children with full height wrapper
+  return <div className="w-full h-full overflow-auto">{children}</div>;
 }

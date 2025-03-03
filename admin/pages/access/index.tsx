@@ -18,6 +18,8 @@ import {
 import UserSheet from "@/components/sheets/UserSheet";
 import { UserType } from "@/types/user";
 import { CreateUserType, UpdateUserType } from "@/types/user";
+import { APIRoleType, CreateAPIRoleType, UpdateAPIRoleType } from "@/types/api_role";
+import APIRoleSheet from "@/components/sheets/APIRoleSheet";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -52,8 +54,12 @@ function AccessContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+//   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [apiRoles, setApiRoles] = useState<APIRoleType[]>([]);
+  const [isApiRoleDialogOpen, setIsApiRoleDialogOpen] = useState(false);
+  const [editingApiRole, setEditingApiRole] = useState<APIRoleType | null>(null);
+  const [isApiRoleSubmitting, setIsApiRoleSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && !token) {
@@ -63,6 +69,7 @@ function AccessContent() {
 
     if (!loading) {
       fetchUsers();
+      fetchApiRoles();
     }
   }, [loading, token, router]);
 
@@ -170,6 +177,151 @@ function AccessContent() {
     }
   };
 
+  const fetchApiRoles = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/api-roles`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch API roles");
+      }
+
+      const data = await response.json();
+      setApiRoles(data);
+      console.log(data)
+    } catch (error) {
+      console.error("Error fetching API roles:", error);
+      toast.dismiss();
+      toast.error("Failed to fetch API roles");
+    }
+  };
+
+  const handleAddApiRole = async (roleData: CreateAPIRoleType | UpdateAPIRoleType) => {
+    try {
+      setIsApiRoleSubmitting(true);
+      const createData = roleData as CreateAPIRoleType;
+      
+      toast.loading("Creating API role...");
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/api-roles`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(createData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.dismiss();
+        toast.error(errorData.error || "Failed to create API role");
+      } else {
+        await fetchApiRoles();
+        setIsApiRoleDialogOpen(false);
+        toast.dismiss();
+        toast.success("API role created successfully");
+      }
+    } catch (error) {
+      console.error("Error creating API role:", error);
+      toast.dismiss();
+      toast.error("Failed to create API role");
+    } finally {
+      setIsApiRoleSubmitting(false);
+    }
+  };
+
+  const handleEditApiRole = async (roleData: CreateAPIRoleType | UpdateAPIRoleType) => {
+    try {
+      setIsApiRoleSubmitting(true);
+      const updateData = roleData as UpdateAPIRoleType;
+      
+      toast.loading("Saving changes...");
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/api-roles/${editingApiRole?.ID}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.dismiss();
+        toast.error(errorData.error || "Failed to update API role");
+      } else {
+        await fetchApiRoles();
+        setIsApiRoleDialogOpen(false);
+        setEditingApiRole(null);
+        toast.dismiss();
+        toast.success("API role updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating API role:", error);
+      toast.dismiss();
+      toast.error(error instanceof Error ? error.message : "Failed to update API role");
+    } finally {
+      setIsApiRoleSubmitting(false);
+    }
+  };
+
+  const handleDeleteApiRole = async (roleId: string) => {
+    try {
+      toast.loading("Deleting API role...");
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/api-roles/${roleId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete API role");
+      }
+
+      await fetchApiRoles();
+      toast.dismiss();
+      toast.success("API role deleted successfully");
+    } catch (error) {
+      console.error("Error deleting API role:", error);
+      toast.dismiss();
+      toast.error(error instanceof Error ? error.message : "Failed to delete API role");
+    }
+  };
+
+  const handleRegenerateApiKey = async (roleId: string) => {
+    try {
+      toast.loading("Regenerating API key...");
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/api-roles/${roleId}/regenerate-key`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to regenerate API key");
+      }
+
+      await fetchApiRoles();
+      toast.dismiss();
+      toast.success("API key regenerated successfully");
+    } catch (error) {
+      console.error("Error regenerating API key:", error);
+      toast.dismiss();
+      toast.error(error instanceof Error ? error.message : "Failed to regenerate API key");
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     try {
       toast.loading("Deleting user...");
@@ -187,7 +339,7 @@ function AccessContent() {
       }
 
       await fetchUsers();
-      setDeletingUserId(null);
+    //   setDeletingUserId(null);
       toast.dismiss();
       toast.success("User deleted successfully");
     } catch (error) {
@@ -306,6 +458,7 @@ function AccessContent() {
                               </Button>
                             </div>
                           </div>
+                          
                         </PopoverContent>
                       </Popover>
                     </div>
@@ -314,6 +467,8 @@ function AccessContent() {
               ))}
             </TableBody>
           </Table>
+
+          <div className="h-20 w-full"></div>
 
           <UserSheet
             isOpen={isDialogOpen}
@@ -333,26 +488,103 @@ function AccessContent() {
       icon: <IoKeyOutline />,
       component: (
         <div className="w-full">
-          <div className="flex flex-col">
-            <h3 className="text-base font-semibold text-black dark:text-white">
-              API Role Management
-            </h3>
-            <p className="text-sm mt-2 text-gray-600 dark:text-gray-400">
-              This feature is coming soon...
-            </p>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col">
+              <h3 className="text-base font-semibold text-black dark:text-white">
+                List of all API keys with access to the API
+              </h3>
+              <p className="text-sm mt-2 text-gray-600 dark:text-gray-400">
+                Generate API keys for your users to access the API.
+              </p>
+            </div>
+            <Button
+              onClick={() => {
+                setEditingApiRole(null);
+                setIsApiRoleDialogOpen(true);
+              }}
+            >
+              Add API Role
+            </Button>
           </div>
+
+          <Table>
+            <TableHeader className="text-black dark:text-white">
+              <TableRow className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <TableHead className="w-1/5 font-semibold">Name</TableHead>
+                <TableHead className="w-1/2 font-semibold">Description</TableHead>
+                <TableHead className="w-1/6 font-semibold">Type</TableHead>
+                <TableHead className="w-1/6 text-right font-semibold">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-black dark:text-white">
+              {apiRoles.map((role) => (
+                <TableRow key={role.ID} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                  <TableCell className="font-medium text-sm">{role.Name}</TableCell>
+                  <TableCell className="text-gray-600 dark:text-gray-400 text-sm">
+                    {role.Description}
+                  </TableCell>
+                  <TableCell className="text-gray-600 dark:text-gray-400 text-sm">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        role.IsSystem
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}
+                    >
+                      {role.IsSystem ? "System" : "Custom"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-sm text-blue-600 dark:text-blue-400"
+                        onClick={() => {
+                          setEditingApiRole(role);
+                          setIsApiRoleDialogOpen(true);
+                        }}
+                        disabled={role.Type == "public_user"}
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          <div className="mt-4 mb-2 text-sm text-gray-400 dark:text-gray-400">
+          The initial permissions for the aforementioned API Roles are empty. Please set the specific permissions for each API Role in the Schema Builder.
+          </div>
+
+          <div className="h-20 w-full"></div>
+
+          <APIRoleSheet
+            isOpen={isApiRoleDialogOpen}
+            onClose={() => {
+              setIsApiRoleDialogOpen(false);
+              setEditingApiRole(null);
+            }}
+            onSubmit={editingApiRole ? handleEditApiRole : handleAddApiRole}
+            initialData={editingApiRole}
+            isSubmitting={isApiRoleSubmitting}
+            onDelete={handleDeleteApiRole}
+            onRegenerateToken={handleRegenerateApiKey}
+          />
         </div>
       )
     }
   ];
 
   return (
-    <div className={`${geistSans.variable} ${geistMono.variable} w-full h-screen bg-white dark:bg-black flex flex-col`}>
+    <div className={`${geistSans.variable} ${geistMono.variable} w-full h-screen bg-white dark:bg-black flex flex-col overflow-hidden`}>
       <Header username={user?.username} onLogout={logout} />
-      <aside className="w-full h-full grid grid-cols-6">
+      <aside className="w-full flex-1 grid grid-cols-6">
         <Sidebar />
-        <div className="col-span-5 flex flex-col justify-start items-center">
-          <div className="w-full h-max flex items-center gap-4 border-b-[1px] border-gray-200 border-dotted px-5 py-3">
+        <div className="col-span-5 flex flex-col justify-start items-center overflow-hidden">
+          <div className="w-full flex items-center gap-4 border-b-[1px] border-gray-200 border-dotted px-5 py-3">
             <h2 className="text-base w-max font-semibold text-black dark:text-white">
               Access Control
             </h2>
@@ -365,7 +597,7 @@ function AccessContent() {
             />
           </div>
 
-          <div className="max-w-4xl w-full flex flex-col h-full pt-5 px-5 border-l-[1px] border-r-[1px] border-gray-200 border-dotted">
+          <div className="max-w-4xl w-full flex flex-col h-[calc(100vh-4rem)] overflow-auto pt-5 px-5 border-l-[1px] border-r-[1px] border-gray-200 border-dotted">
             {items[selectedIndex].component}
           </div>
         </div>

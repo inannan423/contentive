@@ -8,7 +8,7 @@ export default function AdminApp({ Component, pageProps }: AppProps) {
   return (
     <AuthProvider>
       <Component {...pageProps} />
-      <Toaster position="top-right" />
+      <Toaster position="bottom-right" />
     </AuthProvider>
   );
 }
