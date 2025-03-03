@@ -5,10 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
+import React from "react";
+import { RoleType } from "@/types/role";
 
 interface UserDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit: (data: any) => void;
   editData?: {
     id: string;
@@ -28,7 +31,7 @@ export default function UserDialog({ isOpen, onClose, onSubmit, editData }: User
     active: editData?.active ?? true,
   });
 
-  const [roles, setRoles] = useState<any[]>([]);
+  const [roles, setRoles] = useState<RoleType[]>([]);
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -121,8 +124,8 @@ export default function UserDialog({ isOpen, onClose, onSubmit, editData }: User
               </SelectTrigger>
               <SelectContent>
                 {roles.map((role) => (
-                  <SelectItem key={role.id} value={role.id}>
-                    {role.name}
+                  <SelectItem key={role.ID} value={role.Name}>
+                    {role.Name}
                   </SelectItem>
                 ))}
               </SelectContent>

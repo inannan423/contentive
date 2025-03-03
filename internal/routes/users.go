@@ -12,6 +12,11 @@ func RegisterUserRoutes(app *fiber.App) {
 	auth := app.Group("/admin/auth")
 	auth.Post("/login", handlers.Login)
 
+	auth.Get("/validate",
+		middlewares.AuthMiddleware(),
+		handlers.ValidateToken,
+	)
+
 	users := app.Group("/admin/users")
 	users.Use(middlewares.AuthMiddleware())
 
@@ -27,6 +32,13 @@ func RegisterUserRoutes(app *fiber.App) {
 
 	users.Put("/:id",
 		middlewares.RequirePermission(models.ManageUsers),
+		middlewares.ValidateSuperAdminOperation(),
 		handlers.UpdateUser,
+	)
+
+	users.Delete("/:id",
+		middlewares.RequirePermission(models.ManageUsers),
+		middlewares.ValidateSuperAdminOperation(),
+		handlers.DeleteUser,
 	)
 }

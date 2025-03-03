@@ -1,8 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
+import React from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,36 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export default function Media() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-
-    if (!storedUser || !token) {
-      router.push("/auth/login");
-      return;
-    }
-
-    try {
-      setUser(JSON.parse(storedUser));
-    } catch (error) {
-      console.error("Failed to parse user data", error);
-      router.push("/auth/login");
-      return;
-    }
-
-    setLoading(false);
-  }, [router]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    router.push("/auth/login");
-  };
+  const { user, loading, logout } = useAuth();
 
   if (loading) {
     return (
@@ -58,7 +29,7 @@ export default function Media() {
     <div
       className={`${geistSans.variable} ${geistMono.variable} w-full h-screen bg-white dark:bg-black flex flex-col`}
     >
-      <Header username={user?.username} onLogout={handleLogout} />
+      <Header username={user?.username} onLogout={logout} />
       <aside className="w-full h-full grid grid-cols-6">
         <Sidebar />
         <div className="col-span-5 flex flex-col justify-start items-center">

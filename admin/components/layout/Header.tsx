@@ -1,8 +1,9 @@
 import Image from "next/image";
+import React from "react";
 import { Button } from "@/components/ui/button";
 
 type HeaderProps = {
-  username: string;
+  username: string | undefined;
   onLogout: () => void;
 };
 

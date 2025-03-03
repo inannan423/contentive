@@ -3,6 +3,7 @@ package handlers
 import (
 	"contentive/config"
 	"contentive/internal/models"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -79,6 +80,24 @@ func CreateUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid role ID"})
 	}
 
+	// Check if the role is super_admin
+	var role models.Role
+	if err := config.DB.First(&role, roleID).Error; err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid role"})
+	}
+
+	if role.Type == "super_admin" {
+		// Check if a super_admin user already exists
+		var count int64
+		if err := config.DB.Model(&models.User{}).Joins("JOIN roles ON users.role_id = roles.id").Where("roles.type = ?", "super_admin").Count(&count).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to check existing super admin"})
+		}
+
+		if count > 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Super admin user already exists"})
+		}
+	}
+
 	user := models.User{
 		Username: input.Username,
 		Email:    input.Email,
@@ -138,11 +157,7 @@ func GetUsers(c *fiber.Ctx) error {
 }
 
 func UpdateUser(c *fiber.Ctx) error {
-	userID := c.Params("id")
-	var user models.User
-	if err := config.DB.Preload("Role").First(&user, "id = ?", userID).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
-	}
+	user := c.Locals("targetUser").(*models.User)
 
 	var input struct {
 		Username string `json:"username"`
@@ -155,6 +170,8 @@ func UpdateUser(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
+
+	log.Printf("Update input: %+v", input)
 
 	if input.Username != "" {
 		user.Username = input.Username
@@ -173,13 +190,24 @@ func UpdateUser(c *fiber.Ctx) error {
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid role ID"})
 		}
+
+		var role models.Role
+		if err := config.DB.Preload("Permissions").First(&role, "id = ?", roleID).Error; err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Role not found"})
+		}
+
+		// Check if trying to update to super_admin role
+		if role.Type == models.SuperAdmin {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Cannot update user to super admin role"})
+		}
+
 		user.RoleID = roleID
+		user.Role = role
 	}
 	if input.Active != nil {
 		user.Active = *input.Active
 	}
 
-	// Save the updated user
 	if err := config.DB.Save(&user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user"})
 	}
@@ -198,5 +226,37 @@ func UpdateUser(c *fiber.Ctx) error {
 		"last_login": user.LastLogin,
 		"created_at": user.CreatedAt,
 		"updated_at": user.UpdatedAt,
+	})
+}
+
+func DeleteUser(c *fiber.Ctx) error {
+	userID := c.Params("id")
+
+	var user models.User
+	if err := config.DB.Preload("Role").First(&user, "id = ?", userID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
+
+	if user.Role.Type == models.SuperAdmin {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Cannot delete super admin user",
+		})
+	}
+
+	if err := config.DB.Delete(&user).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete user",
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func ValidateToken(c *fiber.Ctx) error {
+	// If can reach here, it means the token is valid
+	return c.JSON(fiber.Map{
+		"valid": true,
 	})
 }

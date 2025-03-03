@@ -1,6 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import React from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,19 +16,13 @@ const geistMono = Geist_Mono({
 
 export default function Home() {
   const router = useRouter();
+  const { loading } = useAuth();
+
   useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-
-    if (!storedUser || !token) {
-      router.push("/auth/login");
-      return;
+    if (!loading) {
+      router.push("/playground");
     }
-
-    // Redirect to playground page
-    router.push("/playground");
-  }, [router]);
+  }, [loading, router]);
 
   return (
     <div className={`${geistSans.variable} ${geistMono.variable} w-full h-screen bg-white dark:bg-black flex items-center justify-center`}>

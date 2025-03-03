@@ -1,6 +1,8 @@
 import { IoSettingsOutline, IoDocumentTextOutline, IoGridOutline, IoKeyOutline, IoLayersOutline } from "react-icons/io5";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import React from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 type NavItemProps = {
   icon: React.ReactNode;
@@ -26,6 +28,7 @@ const NavItem = ({ icon, label, path, isActive }: NavItemProps) => (
 
 export default function Sidebar() {
   const router = useRouter();
+  const { user } = useAuth();
   const currentPath = router.pathname;
   
   const navItems = [
@@ -33,32 +36,44 @@ export default function Sidebar() {
       path: "/content",
       label: "Content Management",
       icon: <IoDocumentTextOutline size={16} />,
+      requiredRole: ["super_admin", "content_admin", "editor", "viewer"],
     },
     {
       path: "/schema",
       label: "Schema Builder",
       icon: <IoLayersOutline size={16} />,
+      requiredRole: ["super_admin", "content_admin"],
     },
     {
       path: "/media",
       label: "Media Library",
       icon: <IoGridOutline size={16} />,
+      requiredRole: ["super_admin", "content_admin", "editor", "viewer"],
     },
     {
       path: "/access",
       label: "Access",
       icon: <IoKeyOutline size={16} />,
+      requiredRole: ["super_admin"],
     },
     {
       path: "/settings",
       label: "Settings",
       icon: <IoSettingsOutline size={16} />,
+      requiredRole: ["super_admin", "content_admin"],
     },
   ];
 
+  // Filter nav items based on user role
+  const authorizedNavItems = navItems.filter(item => 
+    item.requiredRole.includes(user?.role || '')
+  );
+
+  console.log(authorizedNavItems);
+
   return (
     <div className="col-span-1 border-r border-gray-200 flex flex-col justify-start items-center px-3 py-3 w-full gap-2">
-      {navItems.map((item) => (
+      {authorizedNavItems.map((item) => (
         <NavItem
           key={item.path}
           icon={item.icon}

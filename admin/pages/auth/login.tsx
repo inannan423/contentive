@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
+import React from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,13 +17,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import { useAuth } from '@/contexts/AuthContext';
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
+  const { setUserAndToken } = useAuth();
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -43,19 +47,18 @@ export default function Login() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store token in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Use Context to set user and token
+      setUserAndToken(data.user, data.token);
 
-      // Redirect to dashboard
       router.push('/');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
-
+  
   return (
     <div className={`${geistSans.variable} ${geistMono.variable} w-full min-h-screen bg-white dark:bg-black flex flex-col items-center justify-center p-4`}>
       <div className="w-full max-w-md">
