@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"contentive/config"
+	"contentive/internal/logger"
 	"contentive/internal/models"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,13 +14,17 @@ func GetAPIRolePermissions(c *fiber.Ctx) error {
 
 	var role models.APIRole
 	if err := config.DB.First(&role, "id = ?", roleID).Error; err != nil {
+		logger.Error("Error fetching role %s", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "Role not found"})
 	}
 
 	var permissions []models.APIPermission
 	if err := config.DB.Preload("ContentType").Where("api_role_id = ?", roleID).Find(&permissions).Error; err != nil {
+		logger.Error("Error fetching permissions for role %s", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch permissions"})
 	}
+
+	logger.Info("Permissions for role %s: %v", roleID, permissions)
 
 	return c.Status(fiber.StatusOK).JSON(permissions)
 }
@@ -29,6 +34,7 @@ func UpdateAPIRolePermission(c *fiber.Ctx) error {
 
 	var role models.APIRole
 	if err := config.DB.First(&role, "id = ?", roleID).Error; err != nil {
+		logger.Error("Error fetching role %s", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "API Role not found",
 		})
@@ -41,6 +47,7 @@ func UpdateAPIRolePermission(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&input); err != nil {
+		logger.Error("Error parsing request body %s", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -48,6 +55,7 @@ func UpdateAPIRolePermission(c *fiber.Ctx) error {
 
 	contentTypeID, err := uuid.Parse(input.ContentTypeID)
 	if err != nil {
+		logger.Error("Error parsing content type ID %s", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid content type ID",
 		})
@@ -55,6 +63,7 @@ func UpdateAPIRolePermission(c *fiber.Ctx) error {
 
 	var contentType models.ContentType
 	if err := config.DB.First(&contentType, "id = ?", contentTypeID).Error; err != nil {
+		logger.Error("Error fetching content type %s", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "Content type not found",
 		})
@@ -62,6 +71,7 @@ func UpdateAPIRolePermission(c *fiber.Ctx) error {
 
 	operation := models.OperationType(input.Operation)
 	if operation != models.CreateOperation && operation != models.ReadOperation && operation != models.UpdateOperation && operation != models.DeleteOperation {
+		logger.Error("Error parsing operation %s", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid operation",
 		})
@@ -79,6 +89,7 @@ func UpdateAPIRolePermission(c *fiber.Ctx) error {
 			Enabled:       input.Enabled,
 		}
 		if err := config.DB.Create(&permission).Error; err != nil {
+			logger.Error("Error creating permission %s", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to create permission",
 			})
@@ -86,6 +97,7 @@ func UpdateAPIRolePermission(c *fiber.Ctx) error {
 	} else {
 		permission.Enabled = input.Enabled
 		if err := config.DB.Save(&permission).Error; err != nil {
+			logger.Error("Error updating permission %s", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to update permission",
 			})
@@ -93,10 +105,13 @@ func UpdateAPIRolePermission(c *fiber.Ctx) error {
 	}
 
 	if err := config.DB.Preload("ContentType").First(&permission, permission.ID).Error; err != nil {
+		logger.Error("Error fetching permission %s", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to fetch permission",
 		})
 	}
+
+	logger.Info("Updated permission %v", permission)
 
 	return c.Status(fiber.StatusOK).JSON(permission)
 }
@@ -106,6 +121,7 @@ func BatchUpdateAPIRolePermissions(c *fiber.Ctx) error {
 
 	var role models.APIRole
 	if err := config.DB.First(&role, "id = ?", roleID).Error; err != nil {
+		logger.Error("Error fetching role %s", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "API Role not found",
 		})
@@ -118,6 +134,7 @@ func BatchUpdateAPIRolePermissions(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&input); err != nil {
+		logger.Error("Error parsing request body %s", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -166,6 +183,8 @@ func BatchUpdateAPIRolePermissions(c *fiber.Ctx) error {
 			updatedPermissions = append(updatedPermissions, permission)
 		}
 	}
+
+	logger.Info("Updated permissions %v", updatedPermissions)
 
 	return c.Status(fiber.StatusOK).JSON(updatedPermissions)
 }

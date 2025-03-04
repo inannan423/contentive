@@ -39,15 +39,13 @@ export default function Schema() {
             </h2>
           </div>
           
-          <div className="max-w-4xl w-full h-full pt-5 px-5 border-l-[1px] border-r-[1px] border-gray-200 border-dotted">
-            <div className="flex w-full justify-start items-center gap-2">
-              <p className="font-semibold text-lg text-black dark:text-white">
-                Schema Builder
-              </p>
+          <div className="poo w-full h-full grid grid-cols-5">
+            <div className="h-full border-r-[1px] border-gray-200 border-dotted">
+
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
-              Design and manage your content structure. Create and modify content types, fields, and relationships.
-            </p>
+            <div className="col-span-4 h-full">
+
+            </div>
           </div>
         </div>
       </aside>

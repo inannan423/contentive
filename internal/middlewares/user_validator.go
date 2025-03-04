@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"contentive/config"
+	"contentive/internal/logger"
 	"contentive/internal/models"
 	"log"
 
@@ -13,6 +14,7 @@ func ValidateSuperAdminOperation() fiber.Handler {
 		targetUserID := c.Params("id")
 		var targetUser models.User
 		if err := config.DB.Preload("Role").First(&targetUser, "id = ?", targetUserID).Error; err != nil {
+			logger.Error("Error fetching user", err)
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 		}
 
@@ -25,6 +27,7 @@ func ValidateSuperAdminOperation() fiber.Handler {
 
 		if isSuperAdmin {
 			if targetUser.ID != currentUser.ID {
+				logger.Error("Error fetching user")
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 					"error": "Cannot modify other super admin users",
 				})
@@ -35,12 +38,15 @@ func ValidateSuperAdminOperation() fiber.Handler {
 			}
 			if err := c.BodyParser(&input); err == nil && input.RoleID != "" {
 				if input.RoleID != targetUser.RoleID.String() {
+					logger.Error("Error fetching user")
 					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 						"error": "Cannot change super admin role",
 					})
 				}
 			}
 		}
+
+		logger.Info("Super admin operation validated")
 
 		c.Locals("targetUser", &targetUser)
 		return c.Next()

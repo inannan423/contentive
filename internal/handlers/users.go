@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"contentive/config"
+	"contentive/internal/logger"
 	"contentive/internal/models"
-	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,16 +21,19 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&input); err != nil {
+		logger.Error("Error parsing request body %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
 	// Cannot find user
 	var user models.User
 	if err := config.DB.Preload("Role.Permissions").Where("email = ?", input.Email).First(&user).Error; err != nil {
+		logger.Error("Error fetching user %v", err)
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
 	if !user.CheckPassword(input.Password) {
+		logger.Error("Invalid credentials")
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
@@ -43,11 +46,14 @@ func Login(c *fiber.Ctx) error {
 
 	t, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
 	if err != nil {
+		logger.Error("Error generating token %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
 
 	user.LastLogin = time.Now()
 	config.DB.Save(&user)
+
+	logger.Info("User logged in %v", user)
 
 	return c.JSON(fiber.Map{
 		"token": t,
@@ -72,17 +78,20 @@ func CreateUser(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&input); err != nil {
+		logger.Error("Error parsing request body %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
 	roleID, err := uuid.Parse(input.RoleID)
 	if err != nil {
+		logger.Error("Error parsing role ID %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid role ID"})
 	}
 
 	// Check if the role is super_admin
 	var role models.Role
 	if err := config.DB.First(&role, roleID).Error; err != nil {
+		logger.Error("Error fetching role %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid role"})
 	}
 
@@ -90,10 +99,12 @@ func CreateUser(c *fiber.Ctx) error {
 		// Check if a super_admin user already exists
 		var count int64
 		if err := config.DB.Model(&models.User{}).Joins("JOIN roles ON users.role_id = roles.id").Where("roles.type = ?", "super_admin").Count(&count).Error; err != nil {
+			logger.Error("Error checking existing super admin %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to check existing super admin"})
 		}
 
 		if count > 0 {
+			logger.Error("Super admin user already exists")
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Super admin user already exists"})
 		}
 	}
@@ -107,17 +118,22 @@ func CreateUser(c *fiber.Ctx) error {
 
 	// Hash the password
 	if err := user.HashPassword(); err != nil {
+		logger.Error("Error hashing password %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to hash password"})
 	}
 
 	// Save the user to the database
 	if err := config.DB.Create(&user).Error; err != nil {
+		logger.Error("Error creating user %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
 	}
 
 	if err := config.DB.Preload("Role.Permissions").First(&user, user.ID).Error; err != nil {
+		logger.Error("Error fetching user %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to load user data"})
 	}
+
+	logger.Info("User created %v", user)
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"id":         user.ID,
@@ -135,6 +151,7 @@ func CreateUser(c *fiber.Ctx) error {
 func GetUsers(c *fiber.Ctx) error {
 	var users []models.User
 	if err := config.DB.Preload("Role.Permissions").Find(&users).Error; err != nil {
+		logger.Error("Error fetching users %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch users"})
 	}
 
@@ -153,6 +170,8 @@ func GetUsers(c *fiber.Ctx) error {
 		})
 	}
 
+	logger.Info("Users fetched %v", safeUsers)
+
 	return c.JSON(safeUsers)
 }
 
@@ -168,10 +187,11 @@ func UpdateUser(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&input); err != nil {
+		logger.Error("Error parsing request body %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	log.Printf("Update input: %+v", input)
+	logger.Info("User updated %v", user)
 
 	if input.Username != "" {
 		user.Username = input.Username
@@ -182,22 +202,26 @@ func UpdateUser(c *fiber.Ctx) error {
 	if input.Password != "" {
 		user.Password = input.Password
 		if err := user.HashPassword(); err != nil {
+			logger.Error("Error hashing password %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to hash password"})
 		}
 	}
 	if input.RoleID != "" {
 		roleID, err := uuid.Parse(input.RoleID)
 		if err != nil {
+			logger.Error("Error parsing role ID %v", err)
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid role ID"})
 		}
 
 		var role models.Role
 		if err := config.DB.Preload("Permissions").First(&role, "id = ?", roleID).Error; err != nil {
+			logger.Error("Error fetching role %v", err)
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Role not found"})
 		}
 
 		// Check if trying to update to super_admin role
 		if role.Type == models.SuperAdmin {
+			logger.Error("Cannot update user to super admin role")
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Cannot update user to super admin role"})
 		}
 
@@ -209,12 +233,16 @@ func UpdateUser(c *fiber.Ctx) error {
 	}
 
 	if err := config.DB.Save(&user).Error; err != nil {
+		logger.Error("Error updating user %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user"})
 	}
 
 	if err := config.DB.Preload("Role.Permissions").First(&user, user.ID).Error; err != nil {
+		logger.Error("Error fetching user %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to load updated user data"})
 	}
+
+	logger.Info("User updated %v", user)
 
 	return c.JSON(fiber.Map{
 		"id":         user.ID,
@@ -234,22 +262,27 @@ func DeleteUser(c *fiber.Ctx) error {
 
 	var user models.User
 	if err := config.DB.Preload("Role").First(&user, "id = ?", userID).Error; err != nil {
+		logger.Error("Error fetching user %v", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "User not found",
 		})
 	}
 
 	if user.Role.Type == models.SuperAdmin {
+		logger.Error("Cannot delete super admin user")
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "Cannot delete super admin user",
 		})
 	}
 
 	if err := config.DB.Delete(&user).Error; err != nil {
+		logger.Error("Error deleting user %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to delete user",
 		})
 	}
+
+	logger.Info("User deleted %v", user)
 
 	return c.SendStatus(fiber.StatusNoContent)
 }

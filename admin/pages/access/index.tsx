@@ -511,9 +511,10 @@ function AccessContent() {
             <TableHeader className="text-black dark:text-white">
               <TableRow className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                 <TableHead className="w-1/5 font-semibold">Name</TableHead>
-                <TableHead className="w-1/2 font-semibold">Description</TableHead>
-                <TableHead className="w-1/6 font-semibold">Type</TableHead>
-                <TableHead className="w-1/6 text-right font-semibold">Action</TableHead>
+                <TableHead className="w-2/5 font-semibold">Description</TableHead>
+                <TableHead className="w-1/5 font-semibold">Expiry</TableHead>
+                <TableHead className="w-1/10 font-semibold">Type</TableHead>
+                <TableHead className="w-1/10 text-right font-semibold">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="text-black dark:text-white">
@@ -522,6 +523,13 @@ function AccessContent() {
                   <TableCell className="font-medium text-sm">{role.Name}</TableCell>
                   <TableCell className="text-gray-600 dark:text-gray-400 text-sm">
                     {role.Description}
+                  </TableCell>
+                  <TableCell className={`text-sm ${
+                    role.ExpiresAt && new Date(role.ExpiresAt) < new Date()
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}>
+                    {role.ExpiresAt ? new Date(role.ExpiresAt).toLocaleDateString() : "Never"}
                   </TableCell>
                   <TableCell className="text-gray-600 dark:text-gray-400 text-sm">
                     <span

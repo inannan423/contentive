@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"contentive/config"
+	"contentive/internal/logger"
 	"contentive/internal/models"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,6 +14,7 @@ func ValidateField() fiber.Handler {
 		identifier := c.Params("identifier")
 		var contentType models.ContentType
 		if err := config.DB.First(&contentType, "slug = ?", identifier).Error; err != nil {
+			logger.Error("Error fetching content type", err)
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": "Content type not found",
 			})
@@ -23,6 +25,7 @@ func ValidateField() fiber.Handler {
 		if fieldID := c.Params("id"); fieldID != "" {
 			uid, err := uuid.Parse(fieldID)
 			if err != nil {
+				logger.Error("Error parsing field ID", err)
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Invalid field ID",
 				})
@@ -33,18 +36,21 @@ func ValidateField() fiber.Handler {
 		if c.Method() != "DELETE" {
 			var field models.Field
 			if err := c.BodyParser(&field); err != nil {
+				logger.Error("Error parsing request body", err)
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Invalid request body",
 				})
 			}
 
 			if field.Label == "" {
+				logger.Error("Label cannot be empty")
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Label cannot be empty",
 				})
 			}
 
 			if field.Type == "" {
+				logger.Error("Type cannot be empty")
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Type cannot be empty",
 				})
@@ -65,6 +71,7 @@ func ValidateField() fiber.Handler {
 			}
 
 			if !validTypes[field.Type] {
+				logger.Error("Invalid field type")
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": "Invalid field type",
 				})
@@ -72,6 +79,8 @@ func ValidateField() fiber.Handler {
 
 			c.Locals("field", field)
 		}
+
+		logger.Info("Validated field")
 
 		return c.Next()
 	}
