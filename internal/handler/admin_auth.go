@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"contentive/internal/config"
+	"contentive/internal/database"
 	"contentive/internal/logger"
 	"contentive/internal/models"
 	"contentive/internal/utils"
@@ -21,7 +21,7 @@ func AdminUserLogin(c *fiber.Ctx) error {
 	}
 
 	var user models.AdminUser
-	if err := config.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
+	if err := database.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
 		logger.Error("Failed to fetch user: %v", err)
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
@@ -38,7 +38,7 @@ func AdminUserLogin(c *fiber.Ctx) error {
 	}
 
 	user.LastLoginAt = time.Now()
-	if err := config.DB.Save(&user).Error; err != nil {
+	if err := database.DB.Save(&user).Error; err != nil {
 		logger.Error("Failed to update user: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user"})
 	}

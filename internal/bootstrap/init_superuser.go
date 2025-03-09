@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"contentive/internal/config"
+	"contentive/internal/database"
 	"contentive/internal/logger"
 	"contentive/internal/models"
 	"log"
@@ -18,7 +19,7 @@ func InitSuperUser() {
 
 	// Check if super admin user already exists
 	var count int64
-	if err := config.DB.Model(&models.AdminUser{}).Where("Name = ?", username).Count(&count).Error; err != nil {
+	if err := database.DB.Model(&models.AdminUser{}).Where("Name = ?", username).Count(&count).Error; err != nil {
 		logger.Error("Error checking super admin user: %v", err)
 		log.Fatal("Error checking super admin user: ", err)
 	}
@@ -38,13 +39,13 @@ func InitSuperUser() {
 		LastLoginAt: time.Now(),
 	}
 
-	if err := config.DB.Create(&superAdmin).Error; err != nil {
+	if err := database.DB.Create(&superAdmin).Error; err != nil {
 		logger.Error("Error creating super admin user, error: %v", err)
 		log.Fatal("Error creating super admin user: ", err)
 	}
 
 	// Update super admin permissions
-	if err := config.DB.Model(&superAdmin).Update("permissions", pq.Array([]string{"all"})).Error; err != nil {
+	if err := database.DB.Model(&superAdmin).Update("permissions", pq.Array([]string{"all"})).Error; err != nil {
 		logger.Error("Error updating super admin permissions, error: %v", err)
 		log.Fatal("Error updating super admin permissions: ", err)
 	}

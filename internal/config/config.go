@@ -2,6 +2,7 @@ package config
 
 import (
 	"contentive/internal/logger"
+	"contentive/internal/models"
 	"log"
 	"os"
 
@@ -39,6 +40,8 @@ func InitConfig() {
 		SUPER_USER_PASSWORD: os.Getenv("SUPER_USER_PASSWORD"),
 		SUPER_USER_EMAIL:    os.Getenv("SUPER_USER_EMAIL"),
 	}
+
+	models.SetSecret(AppConfig.JWTSecret)
 
 	logger.Info("Configuration loaded successfully!")
 }

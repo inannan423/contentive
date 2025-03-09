@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"contentive/internal/config"
+	"contentive/internal/database"
 	"contentive/internal/logger"
 	"contentive/internal/models"
 	"contentive/internal/utils"
@@ -32,7 +32,7 @@ func AuthenticateAdminUserJWT() fiber.Handler {
 
 		// Set user ID in context
 		var user models.AdminUser
-		if err := config.DB.First(&user, claims.UserID).Error; err != nil {
+		if err := database.DB.First(&user, claims.UserID).Error; err != nil {
 			logger.Error("Failed to fetch user: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to fetch user",

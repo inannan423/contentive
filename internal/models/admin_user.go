@@ -47,6 +47,20 @@ type AdminUser struct {
 	LastLoginAt time.Time       `json:"last_login_at"`
 }
 
+// SetPermissions sets the permissions for the user according to the role
+func (u *AdminUser) SetPermissions() {
+	switch u.Role {
+	case AdminUserRoleSuperAdmin:
+		u.Permissions = []string{string(AdminUserPermissionAll)}
+	case AdminUserRoleAdmin:
+		u.Permissions = []string{string(AdminUserPermissionSchemeManagement), string(AdminUserPermissionContentRead), string(AdminUserPermissionContentEdit)}
+	case AdminUserRoleEditor:
+		u.Permissions = []string{string(AdminUserPermissionContentRead), string(AdminUserPermissionContentEdit)}
+	case AdminUserRoleViewer:
+		u.Permissions = []string{string(AdminUserPermissionContentRead)}
+	}
+}
+
 // SetPassword sets the password for the user using bcrypt
 func (u *AdminUser) SetPassword(password string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -63,6 +77,11 @@ func (u *AdminUser) CheckPassword(password string) bool {
 	return err == nil
 }
 
+// IsSuperAdmin checks if the user is a super admin
+func (u *AdminUser) IsSuperAdmin() bool {
+	return u.Role == AdminUserRoleSuperAdmin
+}
+
 // BeforeCreate is a GORM hook that is called before creating a new user
 func (u *AdminUser) BeforeCreate(tx *gorm.DB) error {
 	if u.Password != "" {
@@ -70,6 +89,11 @@ func (u *AdminUser) BeforeCreate(tx *gorm.DB) error {
 			return err
 		}
 	}
+	// if the role is not set, set it to viewer
+	if u.Role == "" {
+		u.Role = AdminUserRoleViewer
+	}
+	u.SetPermissions()
 	return nil
 }
 
@@ -79,6 +103,10 @@ func (u *AdminUser) BeforeUpdate(tx *gorm.DB) error {
 		if err := u.SetPassword(u.Password); err != nil {
 			return err
 		}
+	}
+	// if the role is changed, set the permissions
+	if tx.Statement.Changed("Role") {
+		u.SetPermissions()
 	}
 	return nil
 }

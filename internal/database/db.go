@@ -1,6 +1,7 @@
-package config
+package database
 
 import (
+	"contentive/internal/config"
 	"contentive/internal/logger"
 	"contentive/internal/models"
 	"fmt"
@@ -12,14 +13,19 @@ import (
 
 var DB *gorm.DB
 
-func InitDB() {
-	dsn := "host=" + AppConfig.DBHost + " user=" + AppConfig.DBUser + " dbname=" + AppConfig.DBName + " password=" + AppConfig.DBPassword + " port=" + AppConfig.DBPort + " sslmode=disable"
-
+func InitDatabase(dsn string) error {
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 	})
-	if err != nil {
+
+	return err
+}
+
+func InitDB() {
+	dsn := "host=" + config.AppConfig.DBHost + " user=" + config.AppConfig.DBUser + " dbname=" + config.AppConfig.DBName + " password=" + config.AppConfig.DBPassword + " port=" + config.AppConfig.DBPort + " sslmode=disable"
+
+	if err := InitDatabase(dsn); err != nil {
 		log.Fatal("failed to connect to the database:", err)
 	}
 	log.Println("Connected to the database!")
@@ -37,7 +43,7 @@ func InitDB() {
 
 	// check if uuid-ossp extension exists
 	var hasExtension bool
-	err = DB.Raw(`SELECT EXISTS (
+	err := DB.Raw(`SELECT EXISTS (
         SELECT 1 FROM pg_extension WHERE extname = 'uuid-ossp'
     )`).Scan(&hasExtension).Error
 	if err != nil {
@@ -73,12 +79,19 @@ func InitDB() {
 	// log.Println("Existing tables dropped!")
 
 	// Migrate the schema
+	if err := RunMigrations(); err != nil {
+		log.Fatal("failed to run migrations:", err)
+	}
+}
+
+func RunMigrations() error {
 	if err := DB.AutoMigrate(
 		&models.AdminUser{},
 		&models.APIUser{},
 	); err != nil {
 		logger.GeneralAction(fmt.Sprintf("Error migrating database: %v", err))
-		log.Fatal("failed to migrate database:", err)
+		return err
 	}
 	logger.GeneralAction("Database migration completed")
+	return nil
 }
