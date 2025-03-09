@@ -22,6 +22,14 @@ func AddField(c *fiber.Ctx) error {
 		})
 	}
 
+	// Preload the TargetType for the field
+	if err := config.DB.Preload("TargetType").First(&field, "id =?", field.ID).Error; err != nil {
+		logger.Error("Error fetching field %v", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Failed to retrieve field",
+		})
+	}
+
 	logger.Info("Field created successfully")
 
 	return c.Status(201).JSON(field)

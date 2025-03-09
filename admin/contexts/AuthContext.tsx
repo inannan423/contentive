@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 import { AuthUserType } from '@/types/user';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: AuthUserType | null;
@@ -39,11 +40,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
 
       if (!response.ok) {
-        throw new Error('Token validation failed');
+        toast.error('Token validation failed');
+      } else {
+        const data = await response.json();
+        return data.valid;
       }
-
-      const data = await response.json();
-      return data.valid;
+      
     } catch (error) {
       console.error('Token validation error:', error);
       return false;

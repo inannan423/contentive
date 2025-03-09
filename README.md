@@ -11,150 +11,189 @@ Contentive is an open-source headless CMS built with Go and PostgreSQL. It allow
 
 To install Contentive, you will need to have Go and PostgreSQL installed on your system.
 
-<!-- TODO -->
+## **API Documentation**
 
-## API Documentation
+### Authentication
 
-### Content Types
+#### Login
 
-#### Get Content Type
+```typescript
+POST / admin / auth / login;
 
-- **URL**: `/api/content-types/:identifier`
-- **Method**: `GET`
-- **Parameters**:
-  - `identifier`: Content Type ID or slug
-
-#### Create Content Type
-
-- **URL**: `/api/content-types`
-- **Method**: `POST`
-- **Request Body**:
-  ```json
-  {
-    "name": "blog_post",
-    "type": "collection"
-  }
-  ```
-- **Response**: `201 Created`
-  ```json
-  {
-    "id": "uuid",
-    "name": "blog_post",
-    "type": "collection",
-    "createdAt": "2024-03-21T10:00:00Z",
-    "updatedAt": "2024-03-21T10:00:00Z",
-    "fields": []
-  }
-  ```
-
-#### Get All Content Types
-
-- **URL**: `/api/content-types`
-- **Method**: `GET`
-- **Response**: `200 OK`
-  ```json
-  [
-    {
-      "id": "uuid",
-      "name": "blog_post",
-      "type": "collection",
-      "createdAt": "2024-03-21T10:00:00Z",
-      "updatedAt": "2024-03-21T10:00:00Z",
-      "fields": [...]
-    }
-  ]
-  ```
-
-### Fields
-
-#### Add Field to Content Type
-
-- **URL**: `/api/content-types/:contentTypeId/fields`
-- **Method**: `POST`
-- **Request Body**:
-  ```json
-  {
-    "label": "title",
-    "type": "text"
-  }
-  ```
-- **Supported Field Types**:
-  - `text`: Plain text
-  - `rich_text`: Rich text editor
-  - `number`: Numeric value
-  - `date`: ISO 8601 date
-  - `boolean`: True/false value
-  - `enum`: Enumerated value
-  - `relation`: Reference to another content type
-- **Response**: `201 Created`
-  ```json
-  {
-    "id": "uuid",
-    "contentTypeId": "uuid",
-    "label": "title",
-    "type": "text",
-    "createdAt": "2024-03-21T10:00:00Z",
-    "updatedAt": "2024-03-21T10:00:00Z"
-  }
-  ```
-
-#### Update Field
-
-- **URL**: `/api/content-types/:contentTypeId/fields/:id`
-- **Method**: `PUT`
-- **Request Body**: Same as Add Field
-- **Response**: `200 OK`
-
-#### Delete Field
-
-- **URL**: `/api/content-types/:contentTypeId/fields/:id`
-- **Method**: `DELETE`
-- **Response**: `204 No Content`
-
-### Content Entries
-
-#### Create Content Entry
-
-- **URL**: `/api/content-types/:contentTypeId/entries`
-- **Method**: `POST`
-- **Request Body**:
-  ```json
-  {
-    "title": "My First Post",
-    "content": "Hello World!",
-    "published": true,
-    "publishDate": "2024-03-21T10:00:00Z"
-  }
-  ```
-  Note: The fields in the request body must match the fields defined in the content type.
-- **Response**: `201 Created`
-  ```json
-  {
-    "id": "uuid",
-    "contentTypeId": "uuid",
-    "data": {
-      "title": "My First Post",
-      "content": "Hello World!",
-      "published": true,
-      "publishDate": "2024-03-21T10:00:00Z"
-    },
-    "createdAt": "2024-03-21T10:00:00Z",
-    "updatedAt": "2024-03-21T10:00:00Z"
-  }
-  ```
-
-### Error Responses
-
-All endpoints may return the following error responses:
-
-- `400 Bad Request`: Invalid input data
-- `404 Not Found`: Requested resource not found
-- `500 Internal Server Error`: Server-side error
-
-Error response body format:
-
-```json
-{
-  "error": "Error message description"
+// Request Body
+interface LoginRequest {
+  email: string;
+  password: string;
 }
+
+// Response
+interface LoginResponse {
+  token: string;
+}
+```
+
+#### Validate Token
+
+```typescript
+GET / admin / auth / validate;
+
+// Headers
+Authorization: Bearer<token>;
+
+// Response
+interface ValidateResponse {
+  valid: boolean;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    role: Role;
+  };
+}
+```
+
+### Users
+
+#### Get All Users
+
+```typescript
+GET / admin / users;
+
+// Headers
+Authorization: Bearer<token>;
+
+// Required Permission: ManageUsers
+
+// Response
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  createdAt: string;
+  updatedAt: string;
+}
+
+type GetUsersResponse = User[];
+```
+
+#### Create User
+
+```typescript
+POST / admin / users;
+
+// Headers
+Authorization: Bearer<token>;
+
+// Required Permission: ManageUsers
+
+// Request Body
+interface CreateUserRequest {
+  email: string;
+  password: string;
+  name: string;
+  roleId: string;
+}
+
+// Response
+interface CreateUserResponse extends User {}
+```
+
+#### Update User
+
+```typescript
+PUT /admin/users/:id
+
+// Headers
+Authorization: Bearer <token>
+
+// Required Permission: ManageUsers
+// Note: Super Admin required for updating other users
+
+// Request Body
+interface UpdateUserRequest {
+  email?: string;
+  password?: string;
+  name?: string;
+  roleId?: string;
+}
+
+// Response
+interface UpdateUserResponse extends User {}
+```
+
+#### Delete User
+
+```typescript
+DELETE /admin/users/:id
+
+// Headers
+Authorization: Bearer <token>
+
+// Required Permission: ManageUsers
+// Note: Super Admin required for deleting other users
+
+// Response
+interface DeleteUserResponse {
+  success: boolean;
+  message: string;
+}
+```
+
+### Roles
+
+#### Get All Roles
+
+```typescript
+GET / admin / roles;
+
+// Headers
+Authorization: Bearer<token>;
+
+// Required Permission: ManageRoles
+
+// Response
+interface Permission {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  permissions: Permission[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+type GetRolesResponse = Role[];
+```
+
+#### Get Role
+
+```typescript
+GET /admin/roles/:id
+
+// Headers
+Authorization: Bearer <token>
+
+// Required Permission: ManageRoles
+
+// Response
+interface GetRoleResponse extends Role {}
+```
+
+#### Get All Permissions
+
+```typescript
+GET / admin / permissions;
+
+// Headers
+Authorization: Bearer<token>;
+
+// Required Permission: ManageRoles
+
+// Response
+type GetPermissionsResponse = Permission[];
 ```

@@ -22,6 +22,16 @@ func InitDB() {
 	}
 	log.Println("Connected to the database!")
 
+	if err := DB.Exec(`DO $$ 
+	BEGIN 
+		IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'relation_type_enum') THEN
+			CREATE TYPE relation_type_enum AS ENUM ('one_to_one', 'one_to_many', 'many_to_one', 'many_to_many');
+		END IF;
+	END $$;`).Error; err != nil {
+		log.Fatal("failed to create relation_type_enum:", err)
+	}
+	log.Println("Enum types created successfully!")
+
 	// check if uuid-ossp extension exists
 	var hasExtension bool
 	err = DB.Raw(`SELECT EXISTS (

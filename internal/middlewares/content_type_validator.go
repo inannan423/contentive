@@ -14,7 +14,7 @@ func ValidateContentType() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var contentType models.ContentType
 		if err := c.BodyParser(&contentType); err != nil {
-			logger.Error("Error parsing request body", err)
+			logger.Error("Error parsing request body: %v", err)
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Invalid request body",
 			})
@@ -37,7 +37,7 @@ func ValidateContentType() fiber.Handler {
 			// Try to find by UUID first
 			if uid, err := uuid.Parse(identifier); err == nil {
 				if err := config.DB.First(&existingType, "id = ?", uid).Error; err != nil {
-					logger.Error("Error finding content type by UUID", err)
+					logger.Error("Error finding content type by UUID: %v", err)
 					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 						"error": "Content type not found",
 					})
@@ -45,7 +45,7 @@ func ValidateContentType() fiber.Handler {
 			} else {
 				// If not UUID, try to find by slug
 				if err := config.DB.First(&existingType, "slug = ?", identifier).Error; err != nil {
-					logger.Error("Error finding content type by slug", err)
+					logger.Error("Error finding content type by slug: %v", err)
 					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 						"error": "Content type not found",
 					})

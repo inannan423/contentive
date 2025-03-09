@@ -56,8 +56,14 @@ func ValidateContentEntry() fiber.Handler {
 
 		// Create a map for field validation
 		fieldTypes := make(map[string]models.FieldTypeEnum)
+
+		relationFields := make(map[string]*models.Field)
+
 		for _, field := range contentType.Fields {
 			fieldTypes[field.Label] = field.Type
+			if field.Type == models.Relation {
+				relationFields[field.Label] = &field
+			}
 		}
 
 		// Validate provided fields
@@ -121,18 +127,24 @@ func ValidateContentEntry() fiber.Handler {
 					})
 				}
 			case models.Relation:
-				idStr, ok := value.(string)
-				if !ok {
-					logger.Error("Field '%s' must be a UUID string", fieldName)
-					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-						"error": fmt.Sprintf("Field '%s' must be a UUID string", fieldName),
-					})
-				}
-				if _, err := uuid.Parse(idStr); err != nil {
-					logger.Error("Field '%s' must be a valid UUID", fieldName)
-					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-						"error": fmt.Sprintf("Field '%s' must be a valid UUID", fieldName),
-					})
+				field := relationFields[fieldName]
+				switch *field.RelationType {
+				case models.OneToOne, models.ManyToOne:
+					// Validate single reference
+					if err := validateSingleReference(value, field.TargetTypeID); err != nil {
+						logger.Error("Field '%s': %v", fieldName, err)
+						return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+							"error": fmt.Sprintf("Field '%s': %v", fieldName, err),
+						})
+					}
+				case models.OneToMany, models.ManyToMany:
+					// Validate multiple references
+					if err := validateMultipleReferences(value, field.TargetTypeID); err != nil {
+						logger.Error("Field '%s': %v", fieldName, err)
+						return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+							"error": fmt.Sprintf("Field '%s': %v", fieldName, err),
+						})
+					}
 				}
 			case models.Enum:
 				if _, ok := value.(string); !ok {
@@ -237,4 +249,38 @@ func ValidateContentEntry() fiber.Handler {
 		c.Locals("jsonData", datatypes.JSON(jsonData))
 		return c.Next()
 	}
+}
+
+func validateSingleReference(value interface{}, targetTypeID *uuid.UUID) error {
+	idStr, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("must be a UUID string")
+	}
+
+	refID, err := uuid.Parse(idStr)
+	if err != nil {
+		return fmt.Errorf("invalid UUID format")
+	}
+
+	var entry models.ContentEntry
+	if err := config.DB.Where("content_type_id = ? AND id = ?", targetTypeID, refID).First(&entry).Error; err != nil {
+		return fmt.Errorf("referenced entry not found")
+	}
+
+	return nil
+}
+
+func validateMultipleReferences(value interface{}, targetTypeID *uuid.UUID) error {
+	refs, ok := value.([]interface{})
+	if !ok {
+		return fmt.Errorf("must be an array of UUID strings")
+	}
+
+	for _, ref := range refs {
+		if err := validateSingleReference(ref, targetTypeID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
