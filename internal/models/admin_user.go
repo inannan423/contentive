@@ -1,6 +1,12 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+)
 
 type AdminUserRole string
 
@@ -29,14 +35,66 @@ const (
 )
 
 type AdminUser struct {
-	ID          uint                  `json:"id" gorm:"primaryKey;autoIncrement"`
-	Name        string                `json:"name" gorm:"unique"`
-	Email       string                `json:"email" gorm:"unique"`
-	Password    string                `json:"password"`
-	Role        AdminUserRole         `json:"role"`
-	Permissions []AdminUserPermission `json:"permissions" gorm:"type:varchar(255)[]"`
-	Status      AdminUserStatus       `json:"status"`
-	CreatedAt   time.Time             `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt   time.Time             `json:"updated_at" gorm:"autoUpdateTime"`
-	LastLoginAt time.Time             `json:"last_login_at"`
+	ID          uint            `json:"id" gorm:"primaryKey;autoIncrement"`
+	Name        string          `json:"name" gorm:"unique"`
+	Email       string          `json:"email" gorm:"unique"`
+	Password    string          `json:"-" gorm:"column:password"` // json:"-" means it will not be returned in the response
+	Role        AdminUserRole   `json:"role"`
+	Permissions pq.StringArray  `json:"permissions" gorm:"type:text[]"`
+	Status      AdminUserStatus `json:"status"`
+	CreatedAt   time.Time       `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time       `json:"updated_at" gorm:"autoUpdateTime"`
+	LastLoginAt time.Time       `json:"last_login_at"`
+}
+
+// SetPassword sets the password for the user using bcrypt
+func (u *AdminUser) SetPassword(password string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hashedPassword)
+	return nil
+}
+
+// CheckPassword checks if the provided password matches the user's password
+func (u *AdminUser) CheckPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	return err == nil
+}
+
+// BeforeCreate is a GORM hook that is called before creating a new user
+func (u *AdminUser) BeforeCreate(tx *gorm.DB) error {
+	if u.Password != "" {
+		if err := u.SetPassword(u.Password); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BeforeUpdate is a GORM hook that is called before updating a user
+func (u *AdminUser) BeforeUpdate(tx *gorm.DB) error {
+	if tx.Statement.Changed("Password") {
+		if err := u.SetPassword(u.Password); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetRoleLevel returns the level of the role
+func (r AdminUserRole) GetRoleLevel() int {
+	switch r {
+	case AdminUserRoleSuperAdmin:
+		return 4
+	case AdminUserRoleAdmin:
+		return 3
+	case AdminUserRoleEditor:
+		return 2
+	case AdminUserRoleViewer:
+		return 1
+	default:
+		return 0
+	}
 }

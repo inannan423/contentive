@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // APIUserScope is a type for API user scopes.
@@ -25,6 +26,6 @@ type APIUser struct {
 	ExpireAt  *time.Time     `json:"expire_at"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
-	Scopes    []APIUserScope `json:"scopes" gorm:"type:varchar(255)[]"`
+	Scopes    pq.StringArray `json:"scopes" gorm:"type:text[]"`
 	Status    APIUserStatus  `json:"status"`
 }

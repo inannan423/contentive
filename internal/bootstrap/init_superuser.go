@@ -30,13 +30,10 @@ func InitSuperUser() {
 
 	// Create super admin user
 	superAdmin := models.AdminUser{
-		Name:     username,
-		Email:    email,
-		Password: password,
-		Role:     models.AdminUserRoleSuperAdmin,
-		// Permissions: []models.AdminUserPermission{
-		// 	models.AdminUserPermissionAll,
-		// },
+		Name:        username,
+		Email:       email,
+		Password:    password, // will be hashed by BeforeCreate hook
+		Role:        models.AdminUserRoleSuperAdmin,
 		Status:      models.AdminUserStatusActive,
 		LastLoginAt: time.Now(),
 	}

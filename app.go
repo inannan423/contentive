@@ -3,6 +3,9 @@ package main
 import (
 	"contentive/internal/bootstrap"
 	"contentive/internal/config"
+	adminroutes "contentive/internal/routes/admin"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
@@ -10,5 +13,9 @@ func main() {
 	config.InitDB()
 	bootstrap.InitSuperUser()
 
-	// app := fiber.New()
+	app := fiber.New()
+
+	adminroutes.RegisterAdminUserRoutes(app)
+
+	app.Listen(":8080")
 }
