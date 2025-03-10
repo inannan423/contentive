@@ -88,6 +88,7 @@ func RunMigrations() error {
 	if err := DB.AutoMigrate(
 		&models.AdminUser{},
 		&models.APIUser{},
+		&models.Schema{},
 	); err != nil {
 		logger.GeneralAction(fmt.Sprintf("Error migrating database: %v", err))
 		return err
