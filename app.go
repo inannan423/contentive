@@ -19,6 +19,7 @@ func main() {
 	adminroutes.RegisterAdminUserRoutes(app)
 	adminroutes.RegisterAPIUserRoutes(app)
 	adminroutes.RegisterAdminSchemaRoutes(app)
+	adminroutes.RegisterAdminContentRoutes(app)
 
 	app.Listen(":8080")
 }

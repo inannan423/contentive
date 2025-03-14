@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -84,13 +86,13 @@ func Error(format string, v ...interface{}) {
 }
 
 // AdminAction logs admin actions
-func AdminAction(userID uint, username string, action string, details string) {
+func AdminAction(userID uuid.UUID, username string, action string, details string) {
 	location := getFileAndLine()
 	auditLogger.Printf("[%s] [AdminUser:%d:%s] %s - %s", location, userID, username, action, details)
 }
 
 // APIAction logs API actions
-func APIAction(userID string, username string, action string, details string) {
+func APIAction(userID uuid.UUID, username string, action string, details string) {
 	location := getFileAndLine()
 	auditLogger.Printf("[%s] [APIUser:%s:%s] %s - %s", location, userID, username, action, details)
 }

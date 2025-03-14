@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -35,7 +36,7 @@ const (
 )
 
 type AdminUser struct {
-	ID          uint            `json:"id" gorm:"primaryKey;autoIncrement"`
+	ID          uuid.UUID       `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name        string          `json:"name" gorm:"unique"`
 	Email       string          `json:"email" gorm:"unique"`
 	Password    string          `json:"-" gorm:"column:password"` // json:"-" means it will not be returned in the response
@@ -84,6 +85,7 @@ func (u *AdminUser) IsSuperAdmin() bool {
 
 // BeforeCreate is a GORM hook that is called before creating a new user
 func (u *AdminUser) BeforeCreate(tx *gorm.DB) error {
+	u.ID = uuid.New()
 	if u.Password != "" {
 		if err := u.SetPassword(u.Password); err != nil {
 			return err
