@@ -12,6 +12,9 @@ import (
 	"gorm.io/datatypes"
 )
 
+// TODO: validateContentData
+
+// CreateContent creates a new content entry for a given schema
 func CreateContent(c *fiber.Ctx) error {
 	schemaID := c.Params("schema_id")
 
