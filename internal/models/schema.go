@@ -210,6 +210,14 @@ func (s *Schema) ValidateFields() error {
 			if !ok || targetStr == "" {
 				return fmt.Errorf("relation field %s: 'targetSchema' must be a non-empty string", field.Name)
 			}
+
+			// Check if the target schema exists.
+			if schemaValidator != nil {
+				if err := schemaValidator.ValidateTargetSchema(targetStr); err != nil {
+					return fmt.Errorf("relation field %s: %v", field.Name, err)
+				}
+			}
+
 			// 'relationType' is required and must be a valid value.
 			relationType, ok := field.Options["relationType"]
 			if !ok {
@@ -219,7 +227,7 @@ func (s *Schema) ValidateFields() error {
 			if !ok || relationTypeStr == "" {
 				return fmt.Errorf("relation field %s: 'relationType' must be a non-empty string", field.Name)
 			}
-			allowedRelationTypes := []string{"one-to-one", "one-to-many", "many-to-many"}
+			allowedRelationTypes := []string{"one-to-one", "one-to-many", "many-to-many", "many-to-one"}
 			validRelType := false
 			for _, rel := range allowedRelationTypes {
 				if relationTypeStr == rel {

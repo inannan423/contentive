@@ -5,14 +5,162 @@ import (
 	"contentive/internal/logger"
 	"contentive/internal/models"
 	"encoding/json"
+	"fmt"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
-// TODO: validateContentData
+func isValidContentSlug(slug string) bool {
+	return slug == strings.ToLower(slug) &&
+		!strings.Contains(slug, " ") &&
+		!strings.Contains(slug, "_")
+}
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+// validateContentData validates the content data against the schema fields
+func validateContentData(data map[string]interface{}, fields []models.FieldDefinition) error {
+	for _, field := range fields {
+		value, exists := data[field.Name]
+		if !exists {
+			if field.Required {
+				return fmt.Errorf("required field %s is missing", field.Name)
+			}
+			continue
+		}
+
+		switch field.Type {
+		case models.FieldTypeText, models.FieldTypeTextarea, models.FieldTypeRichText:
+			strVal, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("field '%s' must be a string", field.Name)
+			}
+			// Check if the value is within the length range
+			if maxLen, exists := field.Options["maxLength"]; exists {
+				if maxLength, ok := maxLen.(float64); ok {
+					if float64(len(strVal)) > maxLength {
+						return fmt.Errorf("field '%s' exceeds maximum length of %v", field.Name, maxLength)
+					}
+				}
+			}
+			if minLen, exists := field.Options["minLength"]; exists {
+				if minLength, ok := minLen.(float64); ok {
+					if float64(len(strVal)) < minLength {
+						return fmt.Errorf("field '%s' is shorter than minimum length of %v", field.Name, minLength)
+					}
+				}
+			}
+
+		case models.FieldTypeNumber:
+			numVal, ok := value.(float64)
+			if !ok {
+				return fmt.Errorf("field '%s' must be a number", field.Name)
+			}
+			// Check if the value is within the range
+			if min, exists := field.Options["min"]; exists {
+				if minVal, ok := min.(float64); ok && numVal < minVal {
+					return fmt.Errorf("field '%s' is less than minimum value of %v", field.Name, minVal)
+				}
+			}
+			if max, exists := field.Options["max"]; exists {
+				if maxVal, ok := max.(float64); ok && numVal > maxVal {
+					return fmt.Errorf("field '%s' exceeds maximum value of %v", field.Name, maxVal)
+				}
+			}
+
+		case models.FieldTypeBoolean:
+			if _, ok := value.(bool); !ok {
+				return fmt.Errorf("field '%s' must be a boolean", field.Name)
+			}
+
+		case models.FieldTypeDate, models.FieldTypeDateTime:
+			strVal, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("field '%s' must be a valid date string", field.Name)
+			}
+			var layout string
+			if field.Type == models.FieldTypeDate {
+				layout = "2006-01-02"
+			} else {
+				layout = time.RFC3339 // ISO 8601 format
+			}
+
+			if _, err := time.Parse(layout, strVal); err != nil {
+				if field.Type == models.FieldTypeDate {
+					return fmt.Errorf("field '%s' must be a valid date in YYYY-MM-DD format", field.Name)
+				}
+				return fmt.Errorf("field '%s' must be a valid datetime in ISO 8601 format", field.Name)
+			}
+
+		case models.FieldTypeEmail:
+			strVal, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("field '%s' must be a string", field.Name)
+			}
+			// Check if the value is a valid email address
+			if !emailRegex.MatchString(strVal) {
+				return fmt.Errorf("field '%s' is not a valid email address", field.Name)
+			}
+
+		case models.FieldTypeSelect:
+			strVal, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("field '%s' must be a string", field.Name)
+			}
+			// Check if the value is in the options list
+			if options, exists := field.Options["options"]; exists {
+				if optionsList, ok := options.([]interface{}); ok {
+					valid := false
+					for _, opt := range optionsList {
+						if opt == strVal {
+							valid = true
+							break
+						}
+					}
+					if !valid {
+						return fmt.Errorf("field '%s' contains invalid option", field.Name)
+					}
+				}
+			}
+
+		case models.FieldTypeRelation:
+			strVal, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("field '%s' must be a string (slug of the related content)", field.Name)
+			}
+
+			targetSchema, ok := field.Options["targetSchema"]
+			if !ok {
+				return fmt.Errorf("field '%s' missing targetSchema option", field.Name)
+			}
+			targetSchemaStr, ok := targetSchema.(string)
+			if !ok {
+				return fmt.Errorf("field '%s' has invalid targetSchema option", field.Name)
+			}
+
+			// Check if the target schema exists
+			var targetSchemaModel models.Schema
+			if err := database.DB.Where("slug = ?", targetSchemaStr).First(&targetSchemaModel).Error; err != nil {
+				return fmt.Errorf("field '%s' references non-existent schema '%s'", field.Name, targetSchemaStr)
+			}
+
+			// Check if the target schema content exists
+			var contentEntry models.ContentEntry
+			if err := database.DB.Where("content_type_id = ? AND slug = ?", targetSchemaModel.ID, strVal).First(&contentEntry).Error; err != nil {
+				return fmt.Errorf("field '%s' references non-existent content '%s' in schema '%s'", field.Name, strVal, targetSchemaStr)
+			}
+
+		default:
+			return fmt.Errorf("unsupported field type '%s'", field.Type)
+		}
+	}
+	return nil
+}
 
 // CreateContent creates a new content entry for a given schema
 func CreateContent(c *fiber.Ctx) error {
@@ -47,6 +195,14 @@ func CreateContent(c *fiber.Ctx) error {
 		logger.Error("Error parsing request body: %v", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
+		})
+	}
+
+	// Check if slug is empty
+	if input.Slug == "" {
+		logger.Error("Slug is empty")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Slug cannot be empty",
 		})
 	}
 
@@ -86,6 +242,13 @@ func CreateContent(c *fiber.Ctx) error {
 				})
 			}
 		}
+	}
+
+	if err := validateContentData(input.Data, fileds); err != nil {
+		logger.Error("Content data validation failed: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
 	// Turn data to json
@@ -162,8 +325,116 @@ func CreateContent(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(content)
 }
 
-func isValidContentSlug(slug string) bool {
-	return slug == strings.ToLower(slug) &&
-		!strings.Contains(slug, " ") &&
-		!strings.Contains(slug, "_")
+// ContentQuery represents the query parameters for the GetContent handler
+type ContentQuery struct {
+	Page     int    `query:"page"`
+	PageSize int    `query:"page_size"`
+	OrderBy  string `query:"order_by"` // field name such as "created_at" "updated_at" "published_at
+	Order    string `query:"order"`    // asc or desc
+	Search   string `query:"search"`   // search query
+	Status   string `query:"status"`   // is_published or not
+}
+
+// GetContent gets all content entries for a given schema
+func GetContent(c *fiber.Ctx) error {
+	schemaID := c.Params("schema_id")
+
+	query := new(ContentQuery)
+	if err := c.QueryParser(query); err != nil {
+		logger.Error("Error parsing query parameters: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid query parameters",
+		})
+	}
+
+	if query.Page <= 0 {
+		query.Page = 1
+	}
+	if query.PageSize <= 0 {
+		query.PageSize = 10
+	} else if query.PageSize > 100 {
+		query.PageSize = 100
+	}
+
+	// Check if orderBy is valid
+	allowedOrderBy := map[string]bool{"created_at": true, "updated_at": true, "slug": true}
+	if query.OrderBy == "" {
+		query.OrderBy = "created_at"
+	} else if !allowedOrderBy[query.OrderBy] {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid orderBy parameter",
+		})
+	}
+
+	if query.Order != "asc" && query.Order != "desc" {
+		query.Order = "desc"
+	}
+
+	// Check if schema exists
+	var schema models.Schema
+	if err := database.DB.Where("id =?", schemaID).First(&schema).Error; err != nil {
+		logger.Error("Schema not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Schema not found",
+		})
+	}
+
+	db := database.DB.Model(&models.ContentEntry{}).Where("content_type_id = ?", schemaID)
+
+	// Apply filters
+	if query.Status != "" {
+		switch query.Status {
+		case "published":
+			db = db.Where("is_published = ?", true)
+		case "draft":
+			db = db.Where("is_published = ?", false)
+		default:
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid status parameter",
+			})
+		}
+	}
+
+	if query.Search != "" {
+		searchPattern := "%" + query.Search + "%"
+		db = db.Where("slug LIKE ? OR data::text LIKE ?", searchPattern, searchPattern)
+	}
+
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		logger.Error("Error counting content entries: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to count content entries",
+		})
+	}
+
+	offset := (query.Page - 1) * query.PageSize
+	var content []models.ContentEntry
+	if err := db.Order(fmt.Sprintf("%s %s", query.OrderBy, query.Order)).
+		Offset(offset).
+		Limit(query.PageSize).
+		Find(&content).Error; err != nil {
+		logger.Error("Failed to get content: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get content",
+		})
+	}
+
+	totalPages := (total + int64(query.PageSize) - 1) / int64(query.PageSize)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"data": content,
+		"pagination": fiber.Map{
+			"current_page": query.Page,
+			"page_size":    query.PageSize,
+			"total_pages":  totalPages,
+			"total":        total,
+		},
+		"query": fiber.Map{
+			"order_by": query.OrderBy,
+			"order":    query.Order,
+			"search":   query.Search,
+			"status":   query.Status,
+		},
+	})
 }

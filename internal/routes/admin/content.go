@@ -13,5 +13,9 @@ func RegisterAdminContentRoutes(app *fiber.App) {
 	content.Use(middleware.AuthenticateAdminUserJWT())
 	content.Use(middleware.RequireRole(models.AdminUserRoleEditor))
 
+	// Create content
 	content.Post("/schema/:schema_id", handler.CreateContent)
+
+	// Get content
+	content.Get("/schema/:schema_id", handler.GetContent)
 }

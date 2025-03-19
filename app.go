@@ -12,6 +12,7 @@ import (
 func main() {
 	config.InitConfig()
 	database.InitDB()
+	database.InitSchemaValidator()
 	bootstrap.InitSuperUser()
 
 	app := fiber.New()
