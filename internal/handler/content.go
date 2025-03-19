@@ -155,6 +155,61 @@ func validateContentData(data map[string]interface{}, fields []models.FieldDefin
 				return fmt.Errorf("field '%s' references non-existent content '%s' in schema '%s'", field.Name, strVal, targetSchemaStr)
 			}
 
+		case models.FieldTypeMedia:
+			if strVal, ok := value.(string); ok {
+				var media models.Media
+				if err := database.DB.Where("id = ?", strVal).First(&media).Error; err != nil {
+					return fmt.Errorf("field '%s' references non-existent media '%s'", field.Name, strVal)
+				}
+				if mediaType, exists := field.Options["mediaType"]; exists {
+					if allowedType, ok := mediaType.(string); ok && string(media.Type) != allowedType {
+						return fmt.Errorf("field '%s' requires media of type '%s', but got '%s'", field.Name, allowedType, media.Type)
+					}
+				}
+			} else if arrayVal, ok := value.([]interface{}); ok {
+				for _, item := range arrayVal {
+					if strVal, ok := item.(string); ok {
+						var media models.Media
+						if err := database.DB.Where("id = ?", strVal).First(&media).Error; err != nil {
+							return fmt.Errorf("field '%s' references non-existent media '%s'", field.Name, strVal)
+						}
+						if mediaType, exists := field.Options["mediaType"]; exists {
+							if allowedType, ok := mediaType.(string); ok && string(media.Type) != allowedType {
+								return fmt.Errorf("field '%s' requires media of type '%s', but got '%s'", field.Name, allowedType, media.Type)
+							}
+						}
+					} else {
+						return fmt.Errorf("field '%s' must be an array of media IDs", field.Name)
+					}
+				}
+			} else {
+				return fmt.Errorf("field '%s' must be a media ID or an array of media IDs", field.Name)
+			}
+
+		case models.FieldTypeMediaList:
+			arrayVal, ok := value.([]interface{})
+			if !ok {
+				return fmt.Errorf("field '%s' must be an array of media IDs", field.Name)
+			}
+
+			for _, item := range arrayVal {
+				strVal, ok := item.(string)
+				if !ok {
+					return fmt.Errorf("field '%s' must contain only media IDs", field.Name)
+				}
+
+				var media models.Media
+				if err := database.DB.Where("id = ?", strVal).First(&media).Error; err != nil {
+					return fmt.Errorf("field '%s' references non-existent media '%s'", field.Name, strVal)
+				}
+
+				if mediaType, exists := field.Options["mediaType"]; exists {
+					if allowedType, ok := mediaType.(string); ok && string(media.Type) != allowedType {
+						return fmt.Errorf("field '%s' requires media of type '%s', but got '%s'", field.Name, allowedType, media.Type)
+					}
+				}
+			}
+
 		default:
 			return fmt.Errorf("unsupported field type '%s'", field.Type)
 		}

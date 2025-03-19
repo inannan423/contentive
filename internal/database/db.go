@@ -90,6 +90,7 @@ func RunMigrations() error {
 		&models.APIUser{},
 		&models.Schema{},
 		&models.ContentEntry{},
+		&models.Media{},
 	); err != nil {
 		logger.GeneralAction(fmt.Sprintf("Error migrating database: %v", err))
 		return err

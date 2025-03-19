@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -13,18 +14,19 @@ import (
 type FieldType string
 
 const (
-	FieldTypeText     FieldType = "text"
-	FieldTypeTextarea FieldType = "textarea"
-	FieldTypeNumber   FieldType = "number"
-	FieldTypeDate     FieldType = "date"     // Date only
-	FieldTypeDateTime FieldType = "datetime" // Date and time
-	FieldTypeBoolean  FieldType = "boolean"
-	FieldTypeRelation FieldType = "relation"
-	FieldTypeMedia    FieldType = "media"
-	FieldTypeSelect   FieldType = "select"
-	FieldTypeRichText FieldType = "richtext"
-	FieldTypeEmail    FieldType = "email"
-	FieldTypePassword FieldType = "password"
+	FieldTypeText      FieldType = "text"
+	FieldTypeTextarea  FieldType = "textarea"
+	FieldTypeNumber    FieldType = "number"
+	FieldTypeDate      FieldType = "date"     // Date only
+	FieldTypeDateTime  FieldType = "datetime" // Date and time
+	FieldTypeBoolean   FieldType = "boolean"
+	FieldTypeRelation  FieldType = "relation"
+	FieldTypeMedia     FieldType = "media"
+	FieldTypeMediaList FieldType = "media_list"
+	FieldTypeSelect    FieldType = "select"
+	FieldTypeRichText  FieldType = "richtext"
+	FieldTypeEmail     FieldType = "email"
+	FieldTypePassword  FieldType = "password"
 )
 
 type SchemaType string
@@ -49,8 +51,8 @@ type Schema struct {
 	Type      SchemaType     `json:"type" gorm:"type:varchar(10);not null"`
 	Slug      string         `json:"slug" gorm:"unique;not null"`
 	Fields    datatypes.JSON `json:"fields" gorm:"type:jsonb;not null"`
-	CreatedAt int64          `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt int64          `json:"updated_at" gorm:"autoUpdateTime"`
+	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // ValidateFields validates the schema fields with type-specific rules.
@@ -77,6 +79,7 @@ func (s *Schema) ValidateFields() error {
 			FieldTypeDate, FieldTypeDateTime, FieldTypeBoolean,
 			FieldTypeRelation, FieldTypeMedia, FieldTypeSelect,
 			FieldTypeRichText, FieldTypeEmail, FieldTypePassword,
+			FieldTypeMediaList,
 		}
 		validType := false
 		for _, t := range allowedTypes {
@@ -258,6 +261,27 @@ func (s *Schema) ValidateFields() error {
 				v, ok := maxSize.(float64)
 				if !ok || v <= 0 || v != float64(int(v)) {
 					return fmt.Errorf("media field %s: 'maxSize' must be a positive integer", field.Name)
+				}
+			}
+
+		case FieldTypeMediaList:
+			// If allowedTypes is provided, it must be a non-empty array of strings.
+			if allowedTypesVal, exists := field.Options["allowedTypes"]; exists {
+				arr, ok := allowedTypesVal.([]interface{})
+				if !ok || len(arr) == 0 {
+					return fmt.Errorf("media_list field %s: 'allowedTypes' must be a non-empty array", field.Name)
+				}
+				for i, v := range arr {
+					if _, ok := v.(string); !ok {
+						return fmt.Errorf("media_list field %s: allowedTypes at index %d is not a string", field.Name, i)
+					}
+				}
+			}
+			// If maxSize is provided, it must be a positive integer.
+			if maxSize, exists := field.Options["maxSize"]; exists {
+				v, ok := maxSize.(float64)
+				if !ok || v <= 0 || v != float64(int(v)) {
+					return fmt.Errorf("media_list field %s:'maxSize' must be a positive integer", field.Name)
 				}
 			}
 
