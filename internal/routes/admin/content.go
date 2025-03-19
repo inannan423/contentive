@@ -18,4 +18,13 @@ func RegisterAdminContentRoutes(app *fiber.App) {
 
 	// Get content
 	content.Get("/schema/:schema_id", handler.GetContent)
+
+	// Update content
+	content.Put("/schema/:schema_id/:content_id", handler.UpdateContent)
+
+	// Delete content
+	content.Delete("/schema/:schema_id/:content_id", handler.DeleteContent)
+
+	// Publish content
+	content.Post("/schema/:schema_id/:content_id/publish", handler.PublishContent)
 }

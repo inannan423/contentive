@@ -438,3 +438,380 @@ func GetContent(c *fiber.Ctx) error {
 		},
 	})
 }
+
+// UpdateContent updates an existing content entry for a given schema
+func UpdateContent(c *fiber.Ctx) error {
+	schemaID := c.Params("schema_id")
+	contentID := c.Params("content_id")
+
+	// Check if schema exists
+	var schema models.Schema
+	if err := database.DB.Where("id = ?", schemaID).First(&schema).Error; err != nil {
+		logger.Error("Schema not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Schema not found",
+		})
+	}
+
+	// Check if content exists and belongs to the schema
+	var existingContent models.ContentEntry
+	if err := database.DB.Where("id = ? AND content_type_id = ?", contentID, schemaID).First(&existingContent).Error; err != nil {
+		logger.Error("Content not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Content not found",
+		})
+	}
+
+	var input struct {
+		Slug string                 `json:"slug"`
+		Data map[string]interface{} `json:"data"`
+	}
+
+	if err := c.BodyParser(&input); err != nil {
+		logger.Error("Error parsing request body: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Check if slug is provided and valid
+	if input.Slug != "" {
+		if !isValidContentSlug(input.Slug) {
+			logger.Error("Invalid slug format")
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid slug format, must be lowercase, no spaces or underscores",
+			})
+		}
+
+		// Check if new slug already exists (excluding current content)
+		if err := database.DB.Where("slug = ? AND content_type_id = ? AND id != ?", input.Slug, schemaID, contentID).
+			First(&models.ContentEntry{}).Error; err == nil {
+			logger.Error("Content with slug already exists")
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Content with slug already exists",
+			})
+		}
+	}
+
+	// Unmarshal the schema fields
+	var fields []models.FieldDefinition
+	if err := json.Unmarshal(schema.Fields, &fields); err != nil {
+		logger.Error("Error unmarshalling schema fields: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Internal server error",
+		})
+	}
+
+	// If data is provided, validate it
+	if input.Data != nil {
+		// Merge existing data with new data
+		var existingData map[string]interface{}
+		if err := json.Unmarshal(existingContent.Data, &existingData); err != nil {
+			logger.Error("Error unmarshalling existing content data: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Internal server error",
+			})
+		}
+
+		// Update existing data with new data
+		for key, value := range input.Data {
+			existingData[key] = value
+		}
+
+		// Validate all fields after merge
+		if err := validateContentData(existingData, fields); err != nil {
+			logger.Error("Content data validation failed: %v", err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		// Marshal merged data
+		dataJson, err := json.Marshal(existingData)
+		if err != nil {
+			logger.Error("Error marshalling data: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Internal server error",
+			})
+		}
+		existingContent.Data = datatypes.JSON(dataJson)
+	}
+
+	// Update slug if provided
+	if input.Slug != "" {
+		existingContent.Slug = input.Slug
+	}
+
+	// Get current user
+	currentUser := c.Locals("user")
+	if currentUser == nil {
+		logger.Error("User not found")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
+
+	// Update user information
+	var userType models.ContentEntryUserByType
+	var userID uuid.UUID
+
+	if adminUser, ok := currentUser.(models.AdminUser); ok {
+		userType = models.ContentEntryUserByTypeAdmin
+		userID = adminUser.ID
+	} else if apiUser, ok := currentUser.(models.APIUser); ok {
+		userType = models.ContentEntryUserByTypeAPI
+		userID = apiUser.ID
+	} else {
+		logger.Error("Invalid user type")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user type",
+		})
+	}
+
+	existingContent.UpdatedByType = userType
+	existingContent.UpdatedBy = &userID
+
+	// Save the updated content
+	if err := database.DB.Save(&existingContent).Error; err != nil {
+		logger.Error("Failed to update content: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update content",
+		})
+	}
+
+	// Log the action
+	if userType == models.ContentEntryUserByTypeAdmin {
+		adminUser := currentUser.(models.AdminUser)
+		logger.AdminAction(
+			adminUser.ID,
+			adminUser.Name,
+			"UPDATE_CONTENT",
+			"Updated content for schema: "+schema.Name+" with slug: "+existingContent.Slug,
+		)
+	} else {
+		apiUser := currentUser.(models.APIUser)
+		logger.APIAction(
+			apiUser.ID,
+			apiUser.Name,
+			"UPDATE_CONTENT",
+			"Updated content for schema: "+schema.Name+" with slug: "+existingContent.Slug,
+		)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(existingContent)
+}
+
+// PublishContent publishes or unpublishes a content entry
+func PublishContent(c *fiber.Ctx) error {
+	schemaID := c.Params("schema_id")
+	contentID := c.Params("content_id")
+
+	// Check if schema exists
+	var schema models.Schema
+	if err := database.DB.Where("id = ?", schemaID).First(&schema).Error; err != nil {
+		logger.Error("Schema not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Schema not found",
+		})
+	}
+
+	// Check if content exists and belongs to the schema
+	var content models.ContentEntry
+	if err := database.DB.Where("id = ? AND content_type_id = ?", contentID, schemaID).First(&content).Error; err != nil {
+		logger.Error("Content not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Content not found",
+		})
+	}
+
+	var input struct {
+		IsPublished bool `json:"is_published"`
+	}
+
+	if err := c.BodyParser(&input); err != nil {
+		logger.Error("Error parsing request body: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Get current user
+	currentUser := c.Locals("user")
+	if currentUser == nil {
+		logger.Error("User not found")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
+
+	// Get user information
+	var userType models.ContentEntryUserByType
+	var userID uuid.UUID
+
+	if adminUser, ok := currentUser.(models.AdminUser); ok {
+		userType = models.ContentEntryUserByTypeAdmin
+		userID = adminUser.ID
+	} else if apiUser, ok := currentUser.(models.APIUser); ok {
+		userType = models.ContentEntryUserByTypeAPI
+		userID = apiUser.ID
+	} else {
+		logger.Error("Invalid user type")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user type",
+		})
+	}
+
+	// Update content publish status
+	content.IsPublished = input.IsPublished
+	content.UpdatedByType = userType
+	content.UpdatedBy = &userID
+
+	if input.IsPublished {
+		// Set publish information when publishing
+		now := time.Now()
+		content.PublishedAt = &now
+		content.PublishedBy = &userID
+	} else {
+		// Clear publish information when unpublishing
+		content.PublishedAt = nil
+		content.PublishedBy = nil
+	}
+
+	// Save the updated content
+	if err := database.DB.Save(&content).Error; err != nil {
+		logger.Error("Failed to update content publish status: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update content publish status",
+		})
+	}
+
+	// Log the action
+	action := "PUBLISH_CONTENT"
+	actionDesc := "Published content"
+	if !input.IsPublished {
+		action = "UNPUBLISH_CONTENT"
+		actionDesc = "Unpublished content"
+	}
+
+	if userType == models.ContentEntryUserByTypeAdmin {
+		adminUser := currentUser.(models.AdminUser)
+		logger.AdminAction(
+			adminUser.ID,
+			adminUser.Name,
+			action,
+			actionDesc+" for schema: "+schema.Name+" with slug: "+content.Slug,
+		)
+	} else {
+		apiUser := currentUser.(models.APIUser)
+		logger.APIAction(
+			apiUser.ID,
+			apiUser.Name,
+			action,
+			actionDesc+" for schema: "+schema.Name+" with slug: "+content.Slug,
+		)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(content)
+}
+
+// DeleteContent deletes an existing content entry
+func DeleteContent(c *fiber.Ctx) error {
+	schemaID := c.Params("schema_id")
+	contentID := c.Params("content_id")
+
+	// Check if schema exists
+	var schema models.Schema
+	if err := database.DB.Where("id = ?", schemaID).First(&schema).Error; err != nil {
+		logger.Error("Schema not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Schema not found",
+		})
+	}
+
+	// Check if content exists and belongs to the schema
+	var content models.ContentEntry
+	if err := database.DB.Where("id = ? AND content_type_id = ?", contentID, schemaID).First(&content).Error; err != nil {
+		logger.Error("Content not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Content not found",
+		})
+	}
+
+	// Get current user
+	currentUser := c.Locals("user")
+	if currentUser == nil {
+		logger.Error("User not found")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
+
+	// Get user information
+	var userType models.ContentEntryUserByType
+	var userID uuid.UUID
+	var userName string
+
+	if adminUser, ok := currentUser.(models.AdminUser); ok {
+		userType = models.ContentEntryUserByTypeAdmin
+		userID = adminUser.ID
+		userName = adminUser.Name
+	} else if apiUser, ok := currentUser.(models.APIUser); ok {
+		userType = models.ContentEntryUserByTypeAPI
+		userID = apiUser.ID
+		userName = apiUser.Name
+	} else {
+		logger.Error("Invalid user type")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user type",
+		})
+	}
+
+	// Start a transaction
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		logger.Error("Failed to start transaction: %v", tx.Error)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Internal server error",
+		})
+	}
+
+	// Delete the content
+	if err := tx.Delete(&content).Error; err != nil {
+		tx.Rollback()
+		logger.Error("Failed to delete content: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete content",
+		})
+	}
+
+	// Log the action before committing the transaction
+	if userType == models.ContentEntryUserByTypeAdmin {
+		logger.AdminAction(
+			userID,
+			userName,
+			"DELETE_CONTENT",
+			"Deleted content for schema: "+schema.Name+" with slug: "+content.Slug,
+		)
+	} else {
+		logger.APIAction(
+			userID,
+			userName,
+			"DELETE_CONTENT",
+			"Deleted content for schema: "+schema.Name+" with slug: "+content.Slug,
+		)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		logger.Error("Failed to commit transaction: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete content",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Content deleted successfully",
+		"content": content,
+	})
+}
