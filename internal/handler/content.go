@@ -219,7 +219,14 @@ func validateContentData(data map[string]interface{}, fields []models.FieldDefin
 
 // CreateContent creates a new content entry for a given schema
 func CreateContent(c *fiber.Ctx) error {
-	schemaID := c.Params("schema_id")
+	// Get schema ID from locals
+	var schemaID interface{}
+	if id := c.Locals("schema_id"); id != nil {
+		schemaID = id
+	} else {
+		// If schema_id is not in locals, get it from params
+		schemaID = c.Params("schema_id")
+	}
 
 	// Check if schema exists
 	var schema models.Schema
@@ -392,7 +399,16 @@ type ContentQuery struct {
 
 // GetContent gets all content entries for a given schema
 func GetContent(c *fiber.Ctx) error {
-	schemaID := c.Params("schema_id")
+	// Get schema ID from locals
+	var schemaID interface{}
+	id := c.Locals("schema_id")
+	fmt.Println(id)
+	if id := c.Locals("schema_id"); id != nil {
+		schemaID = id
+	} else {
+		// If schema_id is not in locals, get it from params
+		schemaID = c.Params("schema_id")
+	}
 
 	query := new(ContentQuery)
 	if err := c.QueryParser(query); err != nil {
@@ -494,10 +510,70 @@ func GetContent(c *fiber.Ctx) error {
 	})
 }
 
-// UpdateContent updates an existing content entry for a given schema
-func UpdateContent(c *fiber.Ctx) error {
+// GetContentById gets a content entry by ID
+func GetContentById(c *fiber.Ctx) error {
 	schemaID := c.Params("schema_id")
 	contentID := c.Params("content_id")
+	// Check if schema exists
+	var schema models.Schema
+	if err := database.DB.Where("id =?", schemaID).First(&schema).Error; err != nil {
+		logger.Error("Schema not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Schema not found",
+		})
+	}
+	// Check if content exists and belongs to the schema
+	var content models.ContentEntry
+	if err := database.DB.Where("id =? AND content_type_id =?", contentID, schemaID).First(&content).Error; err != nil {
+		logger.Error("Content not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Content not found",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(content)
+}
+
+// GetContentBySlug gets a content entry by slug
+func GetContentBySlug(c *fiber.Ctx) error {
+	schema := c.Locals("schema").(models.Schema)
+	contentSlug := c.Params("content_slug")
+
+	var content models.ContentEntry
+	if err := database.DB.Where("content_type_id = ? AND slug = ?", schema.ID, contentSlug).First(&content).Error; err != nil {
+		logger.Error("Content not found: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Content not found",
+		})
+	}
+
+	// Check if user is API user and content is not published
+	if _, ok := c.Locals("user").(models.APIUser); ok && !content.IsPublished {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Content not found",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(content)
+}
+
+// UpdateContent updates an existing content entry for a given schema
+func UpdateContent(c *fiber.Ctx) error {
+	// Get schema ID from locals
+	var schemaID interface{}
+	if id := c.Locals("schema_id"); id != nil {
+		schemaID = id
+	} else {
+		// If schema_id is not in locals, get it from params
+		schemaID = c.Params("schema_id")
+	}
+
+	var contentID interface{}
+	if id := c.Locals("content_id"); id != nil {
+		contentID = id
+	} else {
+		// If content_id is not in locals, get it from params
+		contentID = c.Params("content_id")
+	}
 
 	// Check if schema exists
 	var schema models.Schema
@@ -658,8 +734,21 @@ func UpdateContent(c *fiber.Ctx) error {
 
 // PublishContent publishes or unpublishes a content entry
 func PublishContent(c *fiber.Ctx) error {
-	schemaID := c.Params("schema_id")
-	contentID := c.Params("content_id")
+	// Get schema ID from locals
+	var schemaID interface{}
+	if id := c.Locals("schema_id"); id != nil {
+		schemaID = id
+	} else {
+		// If schema_id is not in locals, get it from params
+		schemaID = c.Params("schema_id")
+	}
+	var contentID interface{}
+	if id := c.Locals("content_id"); id != nil {
+		contentID = id
+	} else {
+		// If content_id is not in locals, get it from params
+		contentID = c.Params("content_id")
+	}
 
 	// Check if schema exists
 	var schema models.Schema
@@ -771,8 +860,22 @@ func PublishContent(c *fiber.Ctx) error {
 
 // DeleteContent deletes an existing content entry
 func DeleteContent(c *fiber.Ctx) error {
-	schemaID := c.Params("schema_id")
-	contentID := c.Params("content_id")
+
+	// Get schema ID from locals
+	var schemaID interface{}
+	if id := c.Locals("schema_id"); id != nil {
+		schemaID = id
+	} else {
+		// If schema_id is not in locals, get it from params
+		schemaID = c.Params("schema_id")
+	}
+	var contentID interface{}
+	if id := c.Locals("content_id"); id != nil {
+		contentID = id
+	} else {
+		// If content_id is not in locals, get it from params
+		contentID = c.Params("content_id")
+	}
 
 	// Check if schema exists
 	var schema models.Schema

@@ -55,6 +55,11 @@ type Schema struct {
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
+// Reserved Words List: Schema name cannot be one of the following:
+var reservedWords = []string{
+	"media", "media_list",
+}
+
 // ValidateFields validates the schema fields with type-specific rules.
 func (s *Schema) ValidateFields() error {
 	var fields []FieldDefinition
@@ -70,6 +75,12 @@ func (s *Schema) ValidateFields() error {
 		}
 		if fieldNames[field.Name] {
 			return fmt.Errorf("duplicate field name: %s", field.Name)
+		}
+		// If the field name is a reserved word, return an error.
+		for _, word := range reservedWords {
+			if field.Name == word {
+				return fmt.Errorf("field name '%s' is a reserved word", field.Name)
+			}
 		}
 		fieldNames[field.Name] = true
 

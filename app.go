@@ -5,6 +5,7 @@ import (
 	"contentive/internal/config"
 	"contentive/internal/database"
 	adminroutes "contentive/internal/routes/admin"
+	apiroutes "contentive/internal/routes/api"
 	"contentive/internal/storage"
 	"contentive/internal/storage/aliyun"
 	"contentive/internal/storage/local"
@@ -29,6 +30,9 @@ func main() {
 	adminroutes.RegisterAdminSchemaRoutes(app)
 	adminroutes.RegisterAdminContentRoutes(app)
 	adminroutes.RegisterAdminMediaRoutes(app)
+
+	apiroutes.RegisterAPIContentRoutes(app)
+	apiroutes.RegisterAPIMediaRoutes(app)
 
 	app.Listen(":8080")
 }

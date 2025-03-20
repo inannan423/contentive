@@ -2,9 +2,10 @@ package models
 
 import (
 	"contentive/internal/logger"
-	"gorm.io/gorm"
 	"log"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/golang-jwt/jwt/v5"
 

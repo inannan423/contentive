@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 type MediaQuery struct {
@@ -20,7 +21,18 @@ type MediaQuery struct {
 }
 
 func UploadMedia(c *fiber.Ctx) error {
-	currentUser := c.Locals("user").(models.AdminUser)
+	// Get user from context
+	var userID uuid.UUID
+	if adminUser, ok := c.Locals("user").(models.AdminUser); ok {
+		userID = adminUser.ID
+	} else if apiUser, ok := c.Locals("user").(models.APIUser); ok {
+		userID = apiUser.ID
+	} else {
+		logger.Error("Invalid user type in context")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user type",
+		})
+	}
 
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -79,7 +91,7 @@ func UploadMedia(c *fiber.Ctx) error {
 		Size:      file.Size,
 		Path:      url,
 		URL:       url,
-		CreatedBy: currentUser.ID,
+		CreatedBy: userID,
 	}
 
 	if err := database.DB.Create(&media).Error; err != nil {
@@ -89,7 +101,12 @@ func UploadMedia(c *fiber.Ctx) error {
 		})
 	}
 
-	logger.AdminAction(currentUser.ID, currentUser.Name, "UPLOAD_MEDIA", "Uploaded media: "+media.Name)
+	// Update logging to handle both user types
+	if adminUser, ok := c.Locals("user").(models.AdminUser); ok {
+		logger.AdminAction(adminUser.ID, adminUser.Name, "UPLOAD_MEDIA", "Uploaded media: "+media.Name)
+	} else {
+		logger.Info("API user %s uploaded media: %s", userID, media.Name)
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(media)
 }
