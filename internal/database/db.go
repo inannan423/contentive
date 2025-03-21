@@ -91,6 +91,7 @@ func RunMigrations() error {
 		&models.Schema{},
 		&models.ContentEntry{},
 		&models.Media{},
+		&models.ContentVersion{},
 	); err != nil {
 		logger.GeneralAction(fmt.Sprintf("Error migrating database: %v", err))
 		return err

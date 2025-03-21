@@ -350,21 +350,64 @@ func CreateContent(c *fiber.Ctx) error {
 
 	// Create content entry
 	content := models.ContentEntry{
-		Slug:          input.Slug,
-		Data:          datatypes.JSON(dataJson),
-		ContentTypeID: schema.ID,
-		IsPublished:   false,
-		CreatedByType: userType,
-		UpdatedByType: userType,
-		UpdatedBy:     &userID,
+		Slug:           input.Slug,
+		Data:           datatypes.JSON(dataJson),
+		ContentTypeID:  schema.ID,
+		IsPublished:    false,
+		CreatedByType:  userType,
+		UpdatedByType:  userType,
+		UpdatedBy:      &userID,
+		Status:         "draft",
+		CurrentVersion: 1,
 	}
 
-	if err := database.DB.Create(&content).Error; err != nil {
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		logger.Error("Failed to start transaction: %v", tx.Error)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Internal server error",
+		})
+	}
+
+	if err := tx.Create(&content).Error; err != nil {
+		tx.Rollback()
 		logger.Error("Failed to create content: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create content",
 		})
 	}
+
+	contentVersion := models.ContentVersion{
+		ID:             uuid.New(),
+		ContentEntryID: content.ID,
+		Version:        1,
+		Data:           datatypes.JSON(dataJson),
+		CreatedByID:    &userID,
+		Comment:        "Initial version",
+		Status:         "draft",
+	}
+
+	if err := tx.Create(&contentVersion).Error; err != nil {
+		tx.Rollback()
+		logger.Error("Failed to create content version: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create content version",
+		})
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		logger.Error("Failed to commit transaction: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Internal server error",
+		})
+	}
+
+	// if err := database.DB.Create(&content).Error; err != nil {
+	// 	logger.Error("Failed to create content: %v", err)
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 		"error": "Failed to create content",
+	// 	})
+	// }
 	// If user is admin, log admin action
 	if userType == models.ContentEntryUserByTypeAdmin {
 		adminUser := currentUser.(models.AdminUser)
@@ -633,6 +676,7 @@ func UpdateContent(c *fiber.Ctx) error {
 		})
 	}
 
+	var dataJson []byte
 	// If data is provided, validate it
 	if input.Data != nil {
 		// Merge existing data with new data
@@ -658,19 +702,14 @@ func UpdateContent(c *fiber.Ctx) error {
 		}
 
 		// Marshal merged data
-		dataJson, err := json.Marshal(existingData)
+		var err error
+		dataJson, err = json.Marshal(existingData)
 		if err != nil {
 			logger.Error("Error marshalling data: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Internal server error",
 			})
 		}
-		existingContent.Data = datatypes.JSON(dataJson)
-	}
-
-	// Update slug if provided
-	if input.Slug != "" {
-		existingContent.Slug = input.Slug
 	}
 
 	// Get current user
@@ -699,14 +738,58 @@ func UpdateContent(c *fiber.Ctx) error {
 		})
 	}
 
+	// Start transaction
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		logger.Error("Failed to start transaction: %v", tx.Error)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Internal server error",
+		})
+	}
+
+	// Update content entry
 	existingContent.UpdatedByType = userType
 	existingContent.UpdatedBy = &userID
+	existingContent.CurrentVersion += 1
 
-	// Save the updated content
-	if err := database.DB.Save(&existingContent).Error; err != nil {
+	if input.Slug != "" {
+		existingContent.Slug = input.Slug
+	}
+	if input.Data != nil {
+		existingContent.Data = datatypes.JSON(dataJson)
+	}
+
+	if err := tx.Save(&existingContent).Error; err != nil {
+		tx.Rollback()
 		logger.Error("Failed to update content: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to update content",
+		})
+	}
+
+	// Create new content version
+	contentVersion := models.ContentVersion{
+		ID:             uuid.New(),
+		ContentEntryID: existingContent.ID,
+		Version:        existingContent.CurrentVersion,
+		Data:           existingContent.Data,
+		CreatedByID:    &userID,
+		Comment:        "Content updated",
+		Status:         existingContent.Status,
+	}
+
+	if err := tx.Create(&contentVersion).Error; err != nil {
+		tx.Rollback()
+		logger.Error("Failed to create content version: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create content version",
+		})
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		logger.Error("Failed to commit transaction: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Internal server error",
 		})
 	}
 
