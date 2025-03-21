@@ -858,6 +858,11 @@ func PublishContent(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(content)
 }
 
+// UnpublishContent unpublishes a content entry
+func UnpublishContent(c *fiber.Ctx) error {
+	return PublishContent(c)
+}
+
 // DeleteContent deletes an existing content entry
 func DeleteContent(c *fiber.Ctx) error {
 

@@ -30,4 +30,7 @@ func RegisterAdminContentRoutes(app *fiber.App) {
 
 	// Publish content
 	content.Post("/schema/:schema_id/:content_id/publish", handler.PublishContent)
+
+	// Unpublish content
+	content.Post("/schema/:schema_id/:content_id/unpublish", handler.UnpublishContent)
 }

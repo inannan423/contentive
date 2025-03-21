@@ -38,6 +38,7 @@ const (
 
 // FieldDefinition is a struct that represents the definition of a field
 type FieldDefinition struct {
+	ID       uuid.UUID              `json:"id" gorm:"type:uuid;"`
 	Name     string                 `json:"name"`
 	Type     FieldType              `json:"type"`
 	Required bool                   `json:"required"`

@@ -59,4 +59,12 @@ func RegisterAPIContentRoutes(app *fiber.App) {
 		middleware.RequireSchemaScope("publish"),
 		handler.PublishContent,
 	)
+
+	// Unpublish content - requires {schema}:publish scope
+	content.Post("/schema/:schema_slug/:content_slug/unpublish",
+		middleware.GetSchemaFromSlug(),
+		middleware.GetContentFromSlug(),
+		middleware.RequireSchemaScope("publish"),
+		handler.UnpublishContent,
+	)
 }
