@@ -34,6 +34,7 @@ func RegisterAdminContentRoutes(app *fiber.App) {
 	// Unpublish content
 	content.Post("/schema/:schema_id/:content_id/unpublish", handler.UnpublishContent)
 
+	// Get content versions
 	content.Get("/schema/:schema_id/:content_id/versions", handler.ListContentVersions)
 	content.Get("/schema/:schema_id/:content_id/versions/:version", handler.GetContentVersion)
 	content.Post("/schema/:schema_id/:content_id/versions", handler.CreateContentVersion)
