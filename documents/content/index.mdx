@@ -1,3 +1,10 @@
+import Requester from "../components/requester";
+import Authentication from "../components/authentication";
+
 # Welcome to Contentive
- 
+
 Hello, world!
+
+<Authentication />
+
+<Requester method="GET" url="/admin/content/schema/:schema_id/:content_id" />

@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// GetAllAdminUsers returns all admin users
 func GetAllAdminUsers(c *fiber.Ctx) error {
 	var users []models.AdminUser
 

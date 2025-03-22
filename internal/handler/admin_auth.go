@@ -11,6 +11,7 @@ import (
 )
 
 func AdminUserLogin(c *fiber.Ctx) error {
+	// Parse input
 	var input struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
