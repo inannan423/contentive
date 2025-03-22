@@ -1,0 +1,135 @@
+# Environment Configuration
+
+Contentive uses environment variables for configuration. Create a `.env` file in the root directory of your project and configure the following variables.
+
+## Database Configuration
+
+Configure your PostgreSQL database connection:
+
+```env
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=contentive
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+## Authentication
+
+Set up JWT authentication secret:
+
+```env
+JWT_SECRET=your-secret-key
+```
+
+## Super Admin Account
+
+Configure the default super admin account that will be created during first launch:
+
+```env
+SUPER_USER_NAME=admin
+SUPER_USER_PASSWORD=admin
+SUPER_USER_EMAIL=admin@example.com
+```
+
+## Media Storage
+
+Contentive supports multiple storage options for media files. Configure your preferred storage method:
+
+### Storage Type
+
+```env
+# Options: local, aliyun
+MEDIA_STORAGE_TYPE=local
+```
+
+### Local Storage
+
+If using local storage (`MEDIA_STORAGE_TYPE=local`), configure:
+
+```env
+MEDIA_STORAGE_PATH=./public
+MEDIA_STORAGE_URL=/public
+```
+
+### Aliyun OSS Storage
+
+If using Aliyun OSS (`MEDIA_STORAGE_TYPE=aliyun`), configure:
+
+```env
+OSS_REGION_ID=oss-cn-hangzhou.aliyuncs.com
+OSS_ACCESS_KEY_ID=your-access-key-id
+OSS_ACCESS_KEY_SECRET=your-access-key-secret
+OSS_BUCKET_NAME=your-bucket-name
+```
+
+## Configuration Examples
+
+### Local Storage Example
+
+```env
+DB_USER=postgres
+DB_PASSWORD=secure_password
+DB_NAME=contentive
+DB_HOST=localhost
+DB_PORT=5432
+
+JWT_SECRET=your-secure-jwt-secret
+
+SUPER_USER_NAME=admin
+SUPER_USER_PASSWORD=secure_admin_password
+SUPER_USER_EMAIL=admin@yourdomain.com
+
+MEDIA_STORAGE_TYPE=local
+MEDIA_STORAGE_PATH=./public
+MEDIA_STORAGE_URL=/public
+```
+
+### Aliyun OSS Example
+
+```env
+DB_USER=postgres
+DB_PASSWORD=secure_password
+DB_NAME=contentive
+DB_HOST=localhost
+DB_PORT=5432
+
+JWT_SECRET=your-secure-jwt-secret
+
+SUPER_USER_NAME=admin
+SUPER_USER_PASSWORD=secure_admin_password
+SUPER_USER_EMAIL=admin@yourdomain.com
+
+MEDIA_STORAGE_TYPE=aliyun
+OSS_REGION_ID=oss-cn-hangzhou.aliyuncs.com
+OSS_ACCESS_KEY_ID=your-oss-access-key
+OSS_ACCESS_KEY_SECRET=your-oss-secret
+OSS_BUCKET_NAME=your-bucket
+```
+
+## Security Considerations
+
+1. **Database Security**
+
+   - Use strong passwords for database access
+   - Consider using environment-specific database credentials
+   - Limit database access to necessary IP addresses
+
+2. **JWT Security**
+
+   - Use a strong, unique JWT secret
+   - Rotate JWT secrets periodically
+   - Never commit JWT secrets to version control
+
+3. **Storage Security**
+
+   - For local storage, ensure proper file permissions
+   - For Aliyun OSS, use access keys with minimal required permissions
+   - Regularly rotate cloud storage access credentials
+
+4. **Super Admin Security**
+   - Change default super admin credentials immediately after first login
+   - Use a strong password for the super admin account
+   - Use a secure email address for the super admin
+
+Never commit these env files to version control. Instead, maintain a `.env.example` file with placeholder values.

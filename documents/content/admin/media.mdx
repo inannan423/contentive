@@ -1,0 +1,213 @@
+import Requester from "../../components/requester";
+
+# Media Management
+
+Media management APIs allow you to upload, retrieve, and manage media files in the system. This document outlines all available media management endpoints.
+
+## Authentication
+
+All media management endpoints require Editor role or above.
+
+## List Media
+
+Retrieve a paginated list of media files.
+
+<Requester
+  method="GET"
+  url="/admin/media"
+  description="Get all media files with pagination and filtering. Requires Editor role."
+  type="admin"
+/>
+
+### Query Parameters
+
+- `page`: Page number (default: 1)
+- `page_size`: Items per page (default: 10, max: 100)
+- `type`: Filter by media type (`image`, `video`, `audio`, `file`)
+- `search`: Search by file name
+
+### Response Format
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "example.jpg",
+      "type": "image",
+      "mime_type": "image/jpeg",
+      "size": 1024,
+      "path": "media/example.jpg",
+      "url": "https://example.com/media/example.jpg",
+      "width": 800,
+      "height": 600,
+      "duration": null,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "created_by": "user-uuid"
+    }
+  ],
+  "meta": {
+    "total": 50,
+    "page": 1,
+    "page_size": 10
+  }
+}
+```
+
+## Get Media by ID
+
+Retrieve a specific media file by its ID.
+
+<Requester
+  method="GET"
+  url="/admin/media/:id"
+  description="Get a specific media file. Requires Editor role."
+  type="admin"
+/>
+
+## Upload Media
+
+Upload a new media file.
+
+<Requester
+  method="POST"
+  url="/admin/media"
+  description="Upload a new media file. Requires Editor role."
+  defaultHeaders={[{ key: "Content-Type", value: "multipart/form-data" }]}
+  type="admin"
+  isMultipart={true}
+/>
+
+### Supported File Types
+
+#### Images
+
+- JPEG (.jpg, .jpeg)
+- PNG (.png)
+- GIF (.gif)
+
+#### Documents
+
+- PDF (.pdf)
+- Microsoft Word (.doc, .docx)
+- Microsoft Excel (.xls, .xlsx)
+
+#### Media
+
+- Video (.mp4)
+- Audio (.mp3)
+
+### File Size Limits
+
+- Images: Max 10MB
+- Documents: Max 20MB
+- Videos: Max 100MB
+- Audio: Max 50MB
+
+### Response Format
+
+```json
+{
+  "id": "uuid",
+  "name": "example.jpg",
+  "type": "image",
+  "mime_type": "image/jpeg",
+  "size": 1024,
+  "path": "media/example.jpg",
+  "url": "https://example.com/media/example.jpg",
+  "width": 800,
+  "height": 600,
+  "duration": null,
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z",
+  "created_by": "user-uuid"
+}
+```
+
+## Delete Media
+
+Delete a media file.
+
+<Requester
+  method="DELETE"
+  url="/admin/media/:id"
+  description="Delete a media file. Requires Editor role."
+  type="admin"
+/>
+
+## Error Responses
+
+### 400 Bad Request
+
+- Invalid file type
+- File size exceeds limit
+- Missing file in request
+
+```json
+{
+  "error": "Invalid file type"
+}
+```
+
+### 404 Not Found
+
+- Media file not found
+
+```json
+{
+  "error": "Media not found"
+}
+```
+
+### 413 Payload Too Large
+
+- File size exceeds server limit
+
+```json
+{
+  "error": "File size too large"
+}
+```
+
+### 500 Internal Server Error
+
+- Upload failed
+- Storage provider error
+
+```json
+{
+  "error": "Failed to upload file"
+}
+```
+
+## Best Practices
+
+1. **File Naming**
+
+   - Use descriptive file names
+   - Avoid special characters
+   - Keep names concise
+
+2. **Image Optimization**
+
+   - Compress images before upload
+   - Use appropriate image formats
+   - Consider target display size
+
+3. **Storage Management**
+
+   - Regularly clean unused media
+   - Monitor storage usage
+   - Back up important files
+
+4. **Security**
+
+   - Validate file types
+   - Scan for malware
+   - Use secure URLs
+
+5. **Performance**
+   - Use thumbnails for previews
+   - Implement caching
+   - Consider CDN for delivery

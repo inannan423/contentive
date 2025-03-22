@@ -1,0 +1,222 @@
+import Requester from "../../components/requester";
+
+# Content API Reference
+
+The Content API provides endpoints for managing content entries programmatically. This document outlines all available content operations through the API.
+
+## Authentication
+
+All content endpoints require API token authentication and specific content scopes. See the [Authentication](/api/authentication) section for details about obtaining and using API tokens.
+
+## List Content
+
+Retrieve a paginated list of content entries for a specific schema.
+
+<Requester
+  method="GET"
+  url="/api/content/schema/:schema_slug"
+  description="Get content entries. Requires {schema}:read scope."
+  type="api"
+/>
+
+### Query Parameters
+
+- `page`: Page number (default: 1)
+- `page_size`: Items per page (default: 10, max: 100)
+- `order_by`: Sort field (`created_at`, `updated_at`, `slug`)
+- `order`: Sort direction (`asc` or `desc`)
+- `search`: Search in slug and content
+- `status`: Filter by status (`published` or `draft`)
+
+### Response Format
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "slug": "content-slug",
+      "content_type_id": "schema-uuid",
+      "data": {},
+      "is_published": true,
+      "published_at": "2024-01-01T00:00:00Z",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "status": "published"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "page_size": 10,
+    "total_pages": 5,
+    "total": 50
+  }
+}
+```
+
+## Get Single Content
+
+Retrieve a specific content entry by its slug.
+
+<Requester
+  method="GET"
+  url="/api/content/schema/:schema_slug/:content_slug"
+  description="Get a specific content entry. Requires {schema}:read scope."
+  type="api"
+/>
+
+## Create Content
+
+Create a new content entry for a schema.
+
+<Requester
+  method="POST"
+  url="/api/content/schema/:schema_slug"
+  description="Create a new content entry. Requires {schema}:create scope."
+  defaultBody={`{
+  "slug": "my-new-content",
+  "data": {
+    "title": "My New Content",
+    "description": "Content description",
+    "publishDate": "2024-01-01"
+  }
+}`}
+  type="api"
+/>
+
+### Request Body
+
+- `slug` (required): URL-friendly identifier
+  - Must be lowercase
+  - No spaces or underscores
+  - Unique within schema
+- `data` (required): Content data matching schema fields
+  - Must match schema field definitions
+  - All required fields must be provided
+  - Field types must match schema specifications
+
+## Update Content
+
+Update an existing content entry.
+
+<Requester
+  method="PUT"
+  url="/api/content/schema/:schema_slug/:content_slug"
+  description="Update an existing content entry. Requires {schema}:update scope."
+  defaultBody={`{
+  "slug": "updated-content",
+  "data": {
+    "title": "Updated Content",
+    "description": "Updated description",
+    "publishDate": "2024-01-01"
+  }
+}`}
+  type="api"
+/>
+
+## Delete Content
+
+Delete a content entry.
+
+<Requester
+  method="DELETE"
+  url="/api/content/schema/:schema_slug/:content_slug"
+  description="Delete a content entry. Requires {schema}:delete scope."
+  type="api"
+/>
+
+## Publish Content
+
+Publish a content entry.
+
+<Requester
+  method="POST"
+  url="/api/content/schema/:schema_slug/:content_slug/publish"
+  description="Publish a content entry. Requires {schema}:publish scope."
+  type="api"
+/>
+
+## Unpublish Content
+
+Unpublish a content entry.
+
+<Requester
+  method="POST"
+  url="/api/content/schema/:schema_slug/:content_slug/unpublish"
+  description="Unpublish a content entry. Requires {schema}:publish scope."
+  type="api"
+/>
+
+## Error Responses
+
+### 400 Bad Request
+
+```json
+{
+  "error": "Invalid request body"
+}
+```
+
+### 401 Unauthorized
+
+```json
+{
+  "error": "Missing or invalid API token"
+}
+```
+
+### 403 Forbidden
+
+```json
+{
+  "error": "Insufficient scope"
+}
+```
+
+### 404 Not Found
+
+```json
+{
+  "error": "Content not found"
+}
+```
+
+## Content Field Types
+
+The content data structure supports various field types:
+
+- `text`: Short text content
+- `textarea`: Long text content
+- `richtext`: Rich text with HTML
+- `number`: Numeric values
+- `boolean`: True/false values
+- `date`: Date in YYYY-MM-DD format
+- `datetime`: ISO 8601 datetime
+- `email`: Valid email address
+- `select`: Single selection from options
+- `relation`: Reference to other content
+
+## Best Practices
+
+1. **Slug Management**
+
+   - Use meaningful, URL-friendly slugs
+   - Keep slugs short but descriptive
+   - Avoid special characters
+
+2. **Content Validation**
+
+   - Validate data before sending
+   - Handle required fields properly
+   - Respect field type constraints
+
+3. **Error Handling**
+
+   - Implement proper error handling
+   - Check response status codes
+   - Handle rate limits appropriately
+
+4. **Content Versioning**
+   - Track content versions
+   - Use proper update strategies
+   - Consider content lifecycle

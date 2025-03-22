@@ -1,0 +1,200 @@
+import Requester from "../../components/requester";
+
+# Media API Reference
+
+The Media API provides endpoints for managing media files programmatically. This document outlines all available media operations through the API.
+
+## Authentication
+
+All media endpoints require API token authentication and specific media scopes. See the [Authentication](/api/authentication) section for details about obtaining and using API tokens.
+
+## List Media
+
+Retrieve a paginated list of media files.
+
+<Requester
+  method="GET"
+  url="/api/media"
+  description="Get all media files. Requires media:read scope."
+  type="api"
+/>
+
+### Query Parameters
+
+- `page`: Page number (default: 1)
+- `page_size`: Items per page (default: 10, max: 100)
+- `type`: Filter by media type (`image`, `video`, `audio`, `file`)
+- `search`: Search by file name
+
+### Response Format
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "example.jpg",
+      "type": "image",
+      "mime_type": "image/jpeg",
+      "size": 1024,
+      "path": "media/example.jpg",
+      "url": "https://example.com/media/example.jpg",
+      "width": 800,
+      "height": 600,
+      "duration": null,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "created_by": "user-uuid"
+    }
+  ],
+  "meta": {
+    "total": 50,
+    "page": 1,
+    "page_size": 10
+  }
+}
+```
+
+## Get Media
+
+Retrieve a specific media file by its ID.
+
+<Requester
+  method="GET"
+  url="/api/media/:id"
+  description="Get a specific media file. Requires media:read scope."
+  type="api"
+/>
+
+## Upload Media
+
+Upload a new media file.
+
+<Requester
+  method="POST"
+  url="/api/media"
+  description="Upload a new media file. Requires media:create scope."
+  defaultHeaders={[{ key: "Content-Type", value: "multipart/form-data" }]}
+  type="api"
+  isMultipart={true}
+/>
+
+### Supported File Types
+
+#### Images
+
+- JPEG (.jpg, .jpeg) - `image/jpeg`
+- PNG (.png) - `image/png`
+- GIF (.gif) - `image/gif`
+
+#### Documents
+
+- PDF (.pdf) - `application/pdf`
+- Microsoft Word (.doc, .docx) - `application/msword`
+- Microsoft Excel (.xls, .xlsx) - `application/vnd.ms-excel`
+
+#### Media
+
+- Video (.mp4) - `video/mp4`
+- Audio (.mp3) - `audio/mpeg`
+
+### File Size Limits
+
+- Images: Max 10MB
+- Documents: Max 20MB
+- Videos: Max 100MB
+- Audio: Max 50MB
+
+## Delete Media
+
+Delete a media file.
+
+<Requester
+  method="DELETE"
+  url="/api/media/:id"
+  description="Delete a media file. Requires media:delete scope."
+  type="api"
+/>
+
+## Error Responses
+
+### 400 Bad Request
+
+```json
+{
+  "error": "No file uploaded"
+}
+```
+
+```json
+{
+  "error": "Invalid file type"
+}
+```
+
+### 401 Unauthorized
+
+```json
+{
+  "error": "Missing or invalid API token"
+}
+```
+
+### 403 Forbidden
+
+```json
+{
+  "error": "Insufficient scope"
+}
+```
+
+### 404 Not Found
+
+```json
+{
+  "error": "Media not found"
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "error": "Failed to upload file"
+}
+```
+
+```json
+{
+  "error": "Failed to create media record"
+}
+```
+
+## Best Practices
+
+1. **File Preparation**
+
+   - Optimize images before upload
+   - Use appropriate file formats
+   - Keep file sizes within limits
+   - Use descriptive file names
+
+2. **Error Handling**
+
+   - Implement proper error handling
+   - Validate file types before upload
+   - Handle network issues gracefully
+   - Check file size limits
+
+3. **Security**
+
+   - Validate file content types
+   - Scan for malware
+   - Use secure connections (HTTPS)
+   - Implement proper authentication
+
+4. **Performance**
+   - Batch uploads when possible
+   - Consider implementing resumable uploads
+   - Cache frequently accessed media
+   - Use appropriate compression

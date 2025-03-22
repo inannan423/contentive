@@ -8,40 +8,56 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var (
 	infoLogger    *log.Logger
 	errorLogger   *log.Logger
 	warningLogger *log.Logger
-	debugLogger   *log.Logger
+	auditLogger   *log.Logger
+)
+
+type UserType string
+
+const (
+	UserTypeAdmin UserType = "admin"
+	UserTypeUser  UserType = "user"
 )
 
 func init() {
-	// Create logs directory if not exists
 	logsDir := "logs"
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		log.Fatal("Failed to create logs directory:", err)
+	if err := os.MkdirAll(logsDir, os.ModePerm); err != nil {
+		log.Fatalf("failed to create logs directory: %v", err)
 	}
 
-	// Create or append to log file
 	currentTime := time.Now()
-	logFileName := filepath.Join(logsDir, fmt.Sprintf("%s.log", currentTime.Format("2006-01-02")))
-	file, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFileName := filepath.Join(logsDir, fmt.Sprintf("log_%s.log", currentTime.Format("2006-01-02")))
+
+	logFile, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatal("Failed to open log file:", err)
+		log.Fatalf("failed to open log file: %v", err)
 	}
 
-	// Create multi-writer for both file and stdout
-	multiWriter := io.MultiWriter(file, os.Stdout)
+	infoLogger = log.New(logFile, "INFO: ", log.Ldate|log.Ltime)
+	errorLogger = log.New(logFile, "ERROR: ", log.Ldate|log.Ltime)
+	warningLogger = log.New(logFile, "WARNING: ", log.Ldate|log.Ltime)
+	auditLogger = log.New(logFile, "AUDIT: ", log.Ldate|log.Ltime)
 
-	// Initialize loggers with different prefixes
-	infoLogger = log.New(multiWriter, "\033[32mINFO: \033[0m", log.Ldate|log.Ltime)
-	errorLogger = log.New(multiWriter, "\033[31mERROR: \033[0m", log.Ldate|log.Ltime)
-	warningLogger = log.New(multiWriter, "\033[33mWARNING: \033[0m", log.Ldate|log.Ltime)
-	debugLogger = log.New(multiWriter, "\033[36mDEBUG: \033[0m", log.Ldate|log.Ltime)
+	// Output log messages to the console
+	infoMultiWriter := io.MultiWriter(os.Stdout, logFile)
+	warningMultiWriter := io.MultiWriter(os.Stdout, logFile)
+	errorMultiWriter := io.MultiWriter(os.Stderr, logFile)
+	auditMultiWriter := io.MultiWriter(os.Stdout, logFile)
+
+	infoLogger = log.New(infoMultiWriter, "INFO: ", log.Ldate|log.Ltime)
+	warningLogger = log.New(warningMultiWriter, "WARNING: ", log.Ldate|log.Ltime)
+	errorLogger = log.New(errorMultiWriter, "ERROR: ", log.Ldate|log.Ltime)
+	auditLogger = log.New(auditMultiWriter, "AUDIT: ", log.Ldate|log.Ltime)
 }
 
+// getFileAndLine returns the file name and line number of the caller
 func getFileAndLine() string {
 	_, file, line, ok := runtime.Caller(2)
 	if !ok {
@@ -57,20 +73,32 @@ func Info(format string, v ...interface{}) {
 	infoLogger.Printf("[%s] %s", location, message)
 }
 
-func Error(format string, v ...interface{}) {
-	location := getFileAndLine()
-	message := fmt.Sprintf(format, v...)
-	errorLogger.Printf("[%s] %s", location, message)
-}
-
 func Warning(format string, v ...interface{}) {
 	location := getFileAndLine()
 	message := fmt.Sprintf(format, v...)
 	warningLogger.Printf("[%s] %s", location, message)
 }
 
-func Debug(format string, v ...interface{}) {
+func Error(format string, v ...interface{}) {
 	location := getFileAndLine()
 	message := fmt.Sprintf(format, v...)
-	debugLogger.Printf("[%s] %s", location, message)
+	errorLogger.Printf("[%s] %s", location, message)
+}
+
+// AdminAction logs admin actions
+func AdminAction(userID uuid.UUID, username string, action string, details string) {
+	location := getFileAndLine()
+	auditLogger.Printf("[%s] [AdminUser:%d:%s] %s - %s", location, userID, username, action, details)
+}
+
+// APIAction logs API actions
+func APIAction(userID uuid.UUID, username string, action string, details string) {
+	location := getFileAndLine()
+	auditLogger.Printf("[%s] [APIUser:%s:%s] %s - %s", location, userID, username, action, details)
+}
+
+// GeneralAction logs general actions
+func GeneralAction(details string) {
+	location := getFileAndLine()
+	auditLogger.Printf("[%s][System] %s", location, details)
 }

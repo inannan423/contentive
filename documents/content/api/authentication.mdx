@@ -1,0 +1,124 @@
+import Requester from "../../components/requester";
+import Authentication from "../../components/authentication";
+
+# API Authentication
+
+The Content API uses token-based authentication to secure all API endpoints. This document outlines how to authenticate your API requests.
+
+## Authentication Flow
+
+API authentication uses a token-based system where each API user has a unique token. This token must be included in all API requests.
+
+### Using Your API Token
+
+Include your API token in all requests using the Authorization header:
+
+```http
+Authorization: Bearer <your_api_token>
+```
+
+## Interactive Authentication
+
+Try out the authentication system using the components below:
+
+### Set Your API Token
+
+Use this component to set your API token for testing the endpoints:
+
+<Authentication />
+
+After setting your token, it will be stored in your browser's cookies and automatically included in subsequent requests.
+
+### Test Authentication
+
+You can test your API token using this endpoint:
+
+<Requester
+  method="GET"
+  url="/api/content"
+  description="Test your API token by fetching content. Requires appropriate scope."
+  type="api"
+/>
+
+## Token Validation
+
+The system performs several checks on each request:
+
+1. **Token Presence**
+
+   - Checks if the Authorization header exists
+   - Verifies the token format (Bearer token)
+
+2. **Token Status**
+
+   - Validates if the token belongs to an active API user
+   - Checks if the token has not expired
+
+3. **Scope Validation**
+   - Verifies if the token has the required scopes for the requested operation
+
+## Error Responses
+
+### 401 Unauthorized
+
+Returned when authentication fails:
+
+```json
+{
+  "error": "Missing Authorization header"
+}
+```
+
+```json
+{
+  "error": "Invalid Authorization header format"
+}
+```
+
+```json
+{
+  "error": "Invalid API token"
+}
+```
+
+```json
+{
+  "error": "API token has expired"
+}
+```
+
+### 403 Forbidden
+
+Returned when the token lacks required scopes:
+
+```json
+{
+  "error": "Insufficient scope"
+}
+```
+
+## Best Practices
+
+1. **Token Security**
+
+   - Keep your API token secure
+   - Never expose tokens in client-side code
+   - Rotate tokens periodically
+   - Use environment variables for token storage
+
+2. **Scope Management**
+
+   - Request only the scopes you need
+   - Follow the principle of least privilege
+   - Regularly audit your scope usage
+
+3. **Error Handling**
+
+   - Implement proper error handling for authentication failures
+   - Set up token refresh mechanisms
+   - Monitor for unauthorized access attempts
+
+4. **Token Expiration**
+   - Check token expiration before making requests
+   - Implement proper token refresh flows
+   - Handle expired token errors gracefully

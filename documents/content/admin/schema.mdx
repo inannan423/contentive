@@ -1,0 +1,226 @@
+import Requester from "../../components/requester";
+
+# Schema Management
+
+Content schemas define the structure of your content. This document outlines the API endpoints for managing schemas in the system.
+
+## Authentication
+
+All schema management endpoints require Super Admin role access.
+
+## List Schemas
+
+Retrieve a list of all content schemas.
+
+<Requester
+  method="GET"
+  url="/admin/schema"
+  description="Get all schemas. Requires Super Admin role."
+  type="admin"
+/>
+
+## Get Schema by ID
+
+Retrieve a specific schema by its ID.
+
+<Requester
+  method="GET"
+  url="/admin/schema/:id"
+  description="Get a specific schema. Requires Super Admin role."
+  type="admin"
+/>
+
+## Create Schema
+
+Create a new content schema.
+
+<Requester
+  method="POST"
+  url="/admin/schema"
+  description="Create a new schema. Requires Super Admin role."
+  defaultBody={`{
+  "name": "Blog Post",
+  "type": "list",
+  "slug": "blog-post",
+  "fields": [
+    {
+      "name": "title",
+      "type": "text",
+      "required": true,
+      "options": {
+        "minLength": 3,
+        "maxLength": 100
+      }
+    },
+    {
+      "name": "content",
+      "type": "richtext",
+      "required": true
+    },
+    {
+      "name": "publishDate",
+      "type": "date",
+      "required": true
+    }
+  ]
+}`}
+  type="admin"
+/>
+
+### Request Body Parameters
+
+- `name` (required): Schema name, must be unique
+- `type` (required): Schema type, either `list` or `single`
+  - `list`: Multiple entries allowed (e.g., Blog Posts)
+  - `single`: Only one entry allowed (e.g., Homepage)
+- `slug` (required): URL-friendly identifier, must be:
+  - Lowercase
+  - No spaces
+  - No underscores
+  - Unique across schemas
+- `fields` (required): Array of field definitions
+
+### Field Definition Structure
+
+Each field in the `fields` array must contain:
+
+- `name`: Field identifier
+- `type`: One of the following field types:
+  - `text`: Short text
+  - `textarea`: Multi-line text
+  - `richText`: Rich text editor
+  - `number`: Numeric value
+  - `boolean`: True/false
+  - `date`: Date picker
+  - `datetime`: Date and time picker
+  - `media`: Media file selector
+  - `reference`: Reference to other content
+- `required`: Boolean indicating if the field is mandatory
+- `options`: Object containing field-specific options:
+  - Text fields:
+    - `minLength`: Minimum character length
+    - `maxLength`: Maximum character length
+  - Number fields:
+    - `min`: Minimum value
+    - `max`: Maximum value
+  - Reference fields:
+    - `schemaId`: ID of the referenced schema
+    - `multiple`: Allow multiple references
+
+## Update Schema
+
+Update an existing schema. Note that some changes might affect existing content.
+
+<Requester
+  method="PUT"
+  url="/admin/schema/:id"
+  description="Update an existing schema. Requires Super Admin role."
+  defaultBody={`{
+  "name": "Updated Blog Post",
+  "type": "list",
+  "slug": "updated-blog-post",
+  "fields": [
+    {
+      "name": "title",
+      "type": "text",
+      "required": true,
+      "options": {
+        "minLength": 5,
+        "maxLength": 150
+      }
+    }
+  ]
+}`}
+  type="admin"
+/>
+
+### Update Restrictions
+
+- Cannot change schema type if content exists
+- Field updates must maintain data integrity
+- Slug must remain unique
+- Name must remain unique
+
+## Delete Schema
+
+Delete a schema and optionally its content.
+
+<Requester
+  method="DELETE"
+  url="/admin/schema/:id"
+  description="Delete a schema. Requires Super Admin role."
+  type="admin"
+/>
+
+### Deletion Restrictions
+
+- Cannot delete schemas with existing content unless forced
+- System schemas cannot be deleted
+- Requires Super Admin role
+
+## Error Responses
+
+The API may return the following error responses:
+
+### 400 Bad Request
+
+- Missing required fields
+- Invalid schema type
+- Invalid slug format
+- Duplicate slug or name
+- Invalid field configuration
+
+```json
+{
+  "error": "Error message describing the issue"
+}
+```
+
+### 401 Unauthorized
+
+- Invalid or missing authentication token
+
+```json
+{
+  "error": "Invalid token"
+}
+```
+
+### 403 Forbidden
+
+- Insufficient permissions (requires Super Admin)
+
+```json
+{
+  "error": "Access denied"
+}
+```
+
+### 404 Not Found
+
+- Schema not found
+
+```json
+{
+  "error": "Schema not found"
+}
+```
+
+### 500 Internal Server Error
+
+- Server-side errors
+
+```json
+{
+  "error": "Internal server error"
+}
+```
+
+## Best Practices
+
+1. Plan your schema structure carefully before creation
+2. Use descriptive names for fields
+3. Consider content relationships when designing schemas
+4. Keep field names consistent across schemas
+5. Use appropriate field types for better data validation
+6. Document schema changes for content editors
