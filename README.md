@@ -1,12 +1,124 @@
 # _"Contentive"_ 📖 Headless CMS
 
-## **Description**
+<img src="./documents/public/contentive_post.png" alt="Contentive Logo">
+<div align="center">
+  <h2>A Modern Headless CMS for Content Management</h3>
+</div>
 
-Contentive is an open-source headless CMS built with Go and PostgreSQL. It allows you to create and manage content together with your flexible frontend.
+## 🌟 Features
 
-- **Go**
-- **PostgreSQL**
+- 🚀 **High Performance**: Built with Go and PostgreSQL
+- 🔐 **Secure Authentication**: JWT-based token system
+- 📝 **Flexible Content Types**: Create custom content schemas
+- 🗄️ **Content Versioning**: Track and manage content changes
+- 📦 **Media Management**: Support multiple storage providers
+- 🔑 **Role-Based Access**: Granular permission control
+- 🌐 **RESTful API**: Well-documented API endpoints
+- 💻 **Modern Admin UI**: Built with Next.js and Tailwind CSS
 
-## **Installation**
+## 🛠️ Tech Stack
 
-To install Contentive, you will need to have Go and PostgreSQL installed on your system.
+- **Backend**
+  - Go
+  - PostgreSQL
+  - Fiber (Web Framework)
+  - GORM (ORM)
+- **Frontend**
+  - Next.js
+  - Tailwind CSS
+  - TypeScript
+  - Shadcn UI
+- **Documentation**
+  - Nextra
+
+## 📦 Installation
+
+### Prerequisites
+
+- Go 1.23.1 or higher
+- PostgreSQL 12 or higher
+- Node.js 18 or higher
+- npm or yarn
+
+### Quick Start
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/inannan423/contentive.git
+cd contentive
+```
+
+2. Set up environment variables:
+
+```bash
+cp .env.example .env
+```
+
+3. Install dependencies:
+
+```bash
+# Backend dependencies
+go mod download
+
+# Admin UI dependencies
+cd admin && npm install
+cd ../documents && npm install
+```
+
+4. Start the development server:
+
+```bash
+# Start backend server
+go run app.go
+
+# Start admin UI (in another terminal)
+cd admin && npm run dev
+
+# Start documentation (in another terminal)
+cd documents && npm run dev
+```
+
+## 🔧 Configuration
+
+Contentive uses environment variables for configuration. Key configurations include:
+
+- Database settings
+- JWT authentication
+- Media storage (Local/Aliyun OSS)
+- Super admin account
+
+See the [Environment Configuration](https://contentive-docs.vercel.app/getting-started/environments) guide for details.
+
+## 📚 Documentation
+
+- [Getting Started](https://contentive-docs.vercel.app/getting-started)
+- [API Reference](https://contentive-docs.vercel.app/api)
+- [Admin Guide](https://contentive-docs.vercel.app/admin)
+
+## 🔒 Security
+
+Contentive implements several security measures:
+
+- JWT-based authentication
+- Role-based access control
+- API token management
+- Secure password hashing
+- File upload validation
+
+## 🤝 Contributing
+
+We welcome contributions!
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🌟 Support
+
+If you find Contentive helpful, please consider giving it a star ⭐️
+
+## 📞 Contact
+
+- GitHub Issues: [Create an issue](https://github.com/inannan423/contentive/issues)
+- Email: [your-email@example.com](mailto:jetzihan@outlook.com)
