@@ -9,7 +9,8 @@ type RequesterProps = {
     defaultHeaders?: Array<{ key: string; value: string }>,
     defaultBody?: string,
     description?: string,
-    type?: 'admin' | 'api'
+    type?: 'admin' | 'api',
+    isMultipart?: boolean 
 }
 
 function MethodColor(method: string) {
@@ -35,7 +36,8 @@ export default function Requester({
     defaultHeaders = [{ key: 'Content-Type', value: 'application/json' }],
     defaultBody = '',
     description = '',
-    type = 'admin'  // 设置默认值
+    type = 'admin',
+    isMultipart = false
 }: RequesterProps) {
     const [headers, setHeaders] = useState<Array<{ key: string; value: string }>>(defaultHeaders);
     const [body, setBody] = useState<string>(defaultBody);
@@ -90,6 +92,8 @@ export default function Requester({
         return `${baseUrl}${processedUrl}`;
     };
 
+    const [file, setFile] = useState<File | null>(null);  // 新增状态
+
     const sendRequest = async () => {
         setLoading(true);
         setError(null);
@@ -122,15 +126,19 @@ export default function Requester({
                 headers: headerObj,
             };
             
-            // Add body for non-GET requests
-            if (method !== 'GET' && body.trim()) {
-                try {
-                    // Try to parse as JSON
-                    const jsonBody = JSON.parse(body);
-                    options.body = JSON.stringify(jsonBody);
-                } catch (e) {
-                    // If not valid JSON, use as is
-                    options.body = body;
+            if (method !== 'GET') {
+                if (isMultipart && file) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    options.body = formData;
+                    delete headerObj['Content-Type'];
+                } else if (body.trim()) {
+                    try {
+                        const jsonBody = JSON.parse(body);
+                        options.body = JSON.stringify(jsonBody);
+                    } catch (e) {
+                        options.body = body;
+                    }
                 }
             }
             
@@ -163,27 +171,28 @@ export default function Requester({
         }
     };
 
-    return <div className="w-full my-5 rounded-lg border flex flex-col border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 h-max p-4">
-        {description && (
-            <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-                {description}
-            </div>
-        )}
-        
-        <div className="w-full flex flex-col gap-2 mb-2">
-            <div className='bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 w-full px-4 py-2 rounded-lg flex gap-5 justify-start items-center'>
-                <div className={`px-2 py-1 rounded font-mono text-sm font-bold ${MethodColor(method)}`}>
-                    {method}
+    return (
+        <div className="w-full my-5 rounded-lg border flex flex-col border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 h-max p-4">
+            {description && (
+                <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+                    {description}
                 </div>
-                <div className="font-mono text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                    <span className="font-semibold">Base URL</span>
+            )}
+            
+            <div className="w-full flex flex-col gap-2 mb-2">
+                <div className='bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 w-full px-4 py-2 rounded-lg flex gap-5 justify-start items-center'>
+                    <div className={`px-2 py-1 rounded font-mono text-sm font-bold ${MethodColor(method)}`}>
+                        {method}
+                    </div>
+                    <div className="font-mono text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                        <span className="font-semibold">Base URL</span>
+                    </div>
+                    <div className='h-full border-r border-gray-300 dark:border-gray-600'></div>
+                    <div className='font-mono text-sm italic text-gray-500 dark:text-gray-400'>
+                        {url}
+                    </div>
                 </div>
-                <div className='h-full border-r border-gray-300 dark:border-gray-600'></div>
-                <div className='font-mono text-sm italic text-gray-500 dark:text-gray-400'>
-                    {url}
-                </div>
-            </div>
-
+            
             {/* URL Parameters Section */}
             {Object.keys(urlParams).length > 0 && (
                 <div className='bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-lg p-3'>
@@ -263,12 +272,29 @@ export default function Requester({
                     <IconCode size={18} className='mr-2 text-gray-600 dark:text-gray-400' />
                     <span>Request Body</span>
                 </div>
-                <textarea
-                    placeholder="Enter request body (JSON)"
-                    value={body}
-                    onChange={handleBodyChange}
-                    className='w-full px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 transition-all min-h-[120px]'
-                />
+                
+                {isMultipart ? (
+                    <div className="flex flex-col gap-2">
+                        <input
+                            type="file"
+                            onChange={(e) => setFile(e.target.files?.[0] || null)}
+                            className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md"
+                            placeholder='Select a file'
+                        />
+                        {file && (
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                                Selected file: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <textarea
+                        placeholder="Enter request body (JSON)"
+                        value={body}
+                        onChange={handleBodyChange}
+                        className='w-full px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 transition-all min-h-[120px]'
+                    />
+                )}
             </div>
         )}
         
@@ -341,4 +367,5 @@ export default function Requester({
                 </button>
             </div>
     </div>
+);
 }

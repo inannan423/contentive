@@ -1,1 +1,161 @@
+import Requester from "../../components/requester";
+import Authentication from "../../components/authentication";
+
 # Authentication
+
+The Admin API uses JWT (JSON Web Token) based authentication to secure all administrative endpoints. This document outlines the authentication process and requirements.
+
+## Authentication Flow
+
+1. Obtain a JWT token by logging in through the authentication endpoint:
+
+<Requester
+  method="POST"
+  url="/admin/auth/login"
+  defaultBody={`{
+"email": "admin@admin.com",
+"password": "admin123"
+}`}
+  description="Login to obtain your JWT token"
+  type="admin"
+/>
+
+The successful response will include your token and user information:
+
+```json
+{
+  "token": "your.jwt.token",
+  "user": {
+    "id": "user_id",
+    "name": "User Name",
+    "email": "user.email@example.com",
+    "role": "SuperAdmin"
+  }
+}
+```
+
+2. Include the token in all subsequent requests using the Authorization header:
+
+```http
+Authorization: Bearer <your_jwt_token>
+```
+
+## Interactive Authentication
+
+Try out the authentication system using the components below:
+
+### Set Your Token
+
+Use this component to set your authentication token for testing the API endpoints:
+
+<Authentication />
+
+After setting your token, this token will be stored in your browser's cookies.
+
+### Test Authentication
+
+You can test your authentication token using this endpoint:
+
+<Requester
+  method="GET"
+  url="/admin/users"
+  description="Test your authentication by fetching the list of users. Requires Viewer role or above."
+  type="admin"
+/>
+
+If your token is valid, you will receive a list of users. Otherwise, you will receive an error.
+
+## Role-Based Access Control (RBAC)
+
+The system implements a hierarchical role-based access control system. Each endpoint requires specific role permissions to access.
+
+### Available Roles
+
+Roles are arranged in hierarchical order (from highest to lowest access level):
+
+1. **Super Admin** (`SuperAdmin`)
+
+   - Has full access to all system features
+   - Can manage other admin users
+   - Required for schema management and API user operations
+
+2. **Editor** (`Editor`)
+
+   - Can manage content and media
+   - Access to content creation, editing, and publishing
+   - Can manage media files
+
+3. **Viewer** (`Viewer`)
+   - Read-only access to content
+   - Can view user information
+   - Cannot make modifications
+
+### Role Requirements
+
+Different endpoints require different role levels:
+
+- **Super Admin Required:**
+
+  - Schema management (`/admin/schema/*`)
+  - API user management (`/admin/api/*`)
+  - Admin user management (`/admin/user/*`)
+
+- **Editor Required:**
+
+  - Content management (`/admin/content/*`)
+  - Media management (`/admin/media/*`)
+
+- **Viewer Required:**
+  - Viewing users (`/admin/users/*`)
+  - Viewing individual user details (`/admin/user/:id`)
+
+## Error Responses
+
+Authentication errors will return appropriate HTTP status codes:
+
+- **401 Unauthorized**
+
+  - Missing Authorization header
+  - Invalid token
+
+  ```json
+  {
+    "error": "Missing Authorization header"
+  }
+  ```
+
+- **403 Forbidden**
+
+  - Insufficient role permissions
+
+  ```json
+  {
+    "error": "Access denied"
+  }
+  ```
+
+- **500 Internal Server Error**
+  - Server-side authentication errors
+  ```json
+  {
+    "error": "Failed to fetch user"
+  }
+  ```
+
+## Security Best Practices
+
+1. Keep your JWT token secure and never share it
+2. Implement token rotation for long-running applications
+3. Use HTTPS for all API requests
+4. Log out properly when finished to invalidate the token
+5. Monitor for suspicious authentication attempts
+
+## Token Format
+
+The JWT token contains the following claims:
+
+- User ID
+- Role information
+- Token expiration time
+
+Ensure your token is always valid and not expired when making requests.

@@ -36,7 +36,7 @@ func GetAdminUserById(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var user models.AdminUser
-	if err := database.DB.First(&user, id).Error; err != nil {
+	if err := database.DB.Where("id = ?", id).First(&user).Error; err != nil {
 		logger.Error("Failed to fetch user: %v", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "User not found",
@@ -161,7 +161,7 @@ func UpdateAdminUser(c *fiber.Ctx) error {
 	currentUser := c.Locals("user").(models.AdminUser)
 
 	var user models.AdminUser
-	if err := database.DB.First(&user, id).Error; err != nil {
+	if err := database.DB.Where("id = ?", id).First(&user).Error; err != nil {
 		logger.Error("Failed to fetch user: %v", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "User not found",
@@ -298,7 +298,7 @@ func DeleteAdminUser(c *fiber.Ctx) error {
 	currentUser := c.Locals("user").(models.AdminUser)
 
 	var user models.AdminUser
-	if err := database.DB.First(&user, id).Error; err != nil {
+	if err := database.DB.Where("id = ?", id).First(&user).Error; err != nil {
 		logger.Error("Failed to fetch user: %v", err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "User not found",

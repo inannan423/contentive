@@ -1,0 +1,328 @@
+import Requester from "../../components/requester";
+
+# Content Management
+
+Content management APIs allow you to create, read, update, and delete content entries for your schemas. This document outlines all available content management endpoints.
+
+## Authentication
+
+All content management endpoints require Editor role or above.
+
+## List Content
+
+Retrieve a paginated list of content entries for a specific schema.
+
+<Requester
+  method="GET"
+  url="/admin/content/schema/:schema_id"
+  description="Get content entries with pagination and filtering. Requires Editor role."
+  type="admin"
+/>
+
+### Query Parameters
+
+- `page`: Page number (default: 1)
+- `page_size`: Items per page (default: 10, max: 100)
+- `order_by`: Sort field (`created_at`, `updated_at`, `slug`)
+- `order`: Sort direction (`asc` or `desc`)
+- `search`: Search in slug and content
+- `status`: Filter by status (`published` or `draft`)
+
+### Response Format
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "slug": "content-slug",
+      "content_type_id": "schema-uuid",
+      "data": {},
+      "is_published": false,
+      "published_at": "2024-01-01T00:00:00Z",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "current_version": 1,
+      "status": "draft"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "page_size": 10,
+    "total_pages": 5,
+    "total": 50
+  },
+  "query": {
+    "order_by": "created_at",
+    "order": "desc",
+    "search": "",
+    "status": ""
+  }
+}
+```
+
+## Get Content by ID
+
+Retrieve a specific content entry by its ID.
+
+<Requester
+  method="GET"
+  url="/admin/content/schema/:schema_id/:content_id"
+  description="Get a specific content entry. Requires Editor role."
+  type="admin"
+/>
+
+## Create Content
+
+Create a new content entry for a schema.
+
+<Requester
+  method="POST"
+  url="/admin/content/schema/:schema_id"
+  description="Create a new content entry. Requires Editor role."
+  defaultBody={`{
+  "slug": "my-blog-post",
+  "data": {
+    "title": "My First Blog Post",
+    "content": "<p>This is the content of my first blog post.</p>",
+    "publishDate": "2024-01-01"
+  }
+}`}
+  type="admin"
+/>
+
+### Request Body
+
+- `slug` (required): URL-friendly identifier
+  - Must be lowercase
+  - No spaces
+  - No underscores
+  - Unique within schema
+- `data` (required): Content data matching schema fields
+  - Must match exactly with the schema field definitions
+  - All required fields must be provided
+  - Field types must match schema specifications
+
+## Update Content
+
+Update an existing content entry.
+
+<Requester
+  method="PUT"
+  url="/admin/content/schema/:schema_id/:content_id"
+  description="Update an existing content entry. Requires Editor role."
+  defaultBody={`{
+  "slug": "updated-blog-post",
+  "data": {
+    "title": "Updated Blog Post",
+    "content": "<p>This is the updated content of my blog post.</p>",
+    "publishDate": "2024-01-01"
+  }
+}`}
+  type="admin"
+/>
+
+<Requester
+  method="POST"
+  url="/admin/content/schema/:schema_id"
+  description="Create a new content entry. Requires Editor role."
+  defaultBody={`{
+  "slug": "my-content",
+  "data": {
+    "title": "My Content",
+    "description": "Content description",
+    "publishDate": "2024-01-01"
+  }
+}`}
+  type="admin"
+/>
+
+### Request Body
+
+- `slug` (required): URL-friendly identifier
+  - Must be lowercase
+  - No spaces
+  - No underscores
+  - Unique within schema
+- `data` (required): Content data matching schema fields
+
+## Update Content
+
+Update an existing content entry.
+
+<Requester
+  method="PUT"
+  url="/admin/content/schema/:schema_id/:content_id"
+  description="Update an existing content entry. Requires Editor role."
+  defaultBody={`{
+  "slug": "updated-content",
+  "data": {
+    "title": "Updated Content",
+    "description": "Updated description"
+  }
+}`}
+  type="admin"
+/>
+
+## Delete Content
+
+Delete a content entry.
+
+<Requester
+  method="DELETE"
+  url="/admin/content/schema/:schema_id/:content_id"
+  description="Delete a content entry. Requires Editor role."
+  type="admin"
+/>
+
+## Content Versioning
+
+### List Versions
+
+Get all versions of a content entry.
+
+<Requester
+  method="GET"
+  url="/admin/content/schema/:schema_id/:content_id/versions"
+  description="Get all versions of a content entry. Requires Editor role."
+  type="admin"
+/>
+
+### Get Specific Version
+
+Get a specific version of a content entry.
+
+<Requester
+  method="GET"
+  url="/admin/content/schema/:schema_id/:content_id/versions/:version"
+  description="Get a specific version of content. Requires Editor role."
+  type="admin"
+/>
+
+### Create Version
+
+Create a new version of a content entry.
+
+<Requester
+  method="POST"
+  url="/admin/content/schema/:schema_id/:content_id/versions"
+  description="Create a new content version. Requires Editor role."
+  defaultBody={`{
+  "data": {
+    "title": "New Version",
+    "description": "Version description"
+  },
+  "comment": "Updated content structure"
+}`}
+  type="admin"
+/>
+
+### Restore Version
+
+Restore a previous version of content.
+
+<Requester
+  method="POST"
+  url="/admin/content/schema/:schema_id/:content_id/versions/:version/restore"
+  description="Restore a previous version. Requires Editor role."
+  type="admin"
+/>
+
+## Publishing
+
+### Publish Content
+
+Publish a content entry.
+
+<Requester
+  method="POST"
+  url="/admin/content/schema/:schema_id/:content_id/publish"
+  description="Publish a content entry. Requires Editor role."
+  type="admin"
+/>
+
+### Unpublish Content
+
+Unpublish a content entry.
+
+<Requester
+  method="POST"
+  url="/admin/content/schema/:schema_id/:content_id/unpublish"
+  description="Unpublish a content entry. Requires Editor role."
+  type="admin"
+/>
+
+## Field Validation
+
+The system validates content data based on field types:
+
+- **Text Fields**
+  - Validates string type
+  - Checks min/max length
+- **Number Fields**
+
+  - Validates numeric type
+  - Checks min/max values
+
+- **Date/DateTime Fields**
+
+  - Validates date format
+  - Date: YYYY-MM-DD
+  - DateTime: ISO 8601
+
+- **Email Fields**
+
+  - Validates email format
+
+- **Boolean Fields**
+
+  - Validates true/false values
+
+- **Select Fields**
+  - Validates against allowed options
+
+## Error Responses
+
+### 400 Bad Request
+
+- Invalid input data
+- Validation errors
+- Duplicate slug
+
+```json
+{
+  "error": "Error message"
+}
+```
+
+### 404 Not Found
+
+- Schema not found
+- Content not found
+- Version not found
+
+```json
+{
+  "error": "Resource not found"
+}
+```
+
+### 403 Forbidden
+
+- Insufficient permissions
+
+```json
+{
+  "error": "Access denied"
+}
+```
+
+## Best Practices
+
+1. Use meaningful slugs for better SEO
+2. Implement proper version control
+3. Validate content before publishing
+4. Use appropriate field types
+5. Keep content structure consistent
+6. Regular content backups
+7. Monitor content status

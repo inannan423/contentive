@@ -1,0 +1,188 @@
+import Requester from "../../components/requester";
+
+# API User Management
+
+This document outlines the API endpoints for managing API users in the system. API users are used for programmatic access to the content API.
+
+## Authentication
+
+All API user management endpoints require Super Admin role access.
+
+## List API Users
+
+Retrieve a list of all API users in the system.
+
+<Requester
+  method="GET"
+  url="/admin/api"
+  description="Get all API users. Requires Super Admin role."
+  type="admin"
+/>
+
+### Response Format
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "api-user-name",
+    "description": "API user description",
+    "token": "jwt-token",
+    "expire_at": "2024-01-01T00:00:00Z",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z",
+    "scopes": ["scope1", "scope2"],
+    "status": "active"
+  }
+]
+```
+
+## Get API User
+
+Retrieve a specific API user by ID.
+
+<Requester
+  method="GET"
+  url="/admin/api/:id"
+  description="Get a specific API user. Requires Super Admin role."
+  type="admin"
+/>
+
+## Create API User
+
+Create a new API user.
+
+<Requester
+  method="POST"
+  url="/admin/api"
+  description="Create a new API user. Requires Super Admin role."
+  defaultBody={`{
+  "name": "my-api-user",
+  "description": "API user for blog service",
+  "expire_at": "2024-12-31T23:59:59Z",
+  "status": "active",
+  "scopes": ["blog:read", "blog:write"]
+}`}
+  type="admin"
+/>
+
+### Request Body
+
+- `name` (required): Unique identifier for the API user
+- `description`: Optional description
+- `expire_at`: Optional expiration date (ISO 8601 format)
+- `status` (required): One of:
+  - `active`: User is active and can access the API
+  - `inactive`: User is temporarily disabled
+  - `expired`: User has expired
+- `scopes`: Array of permission scopes
+
+## Update API User
+
+Update an existing API user.
+
+<Requester
+  method="PUT"
+  url="/admin/api/:id"
+  description="Update an API user. Requires Super Admin role."
+  defaultBody={`{
+  "name": "updated-api-user",
+  "description": "Updated description",
+  "expire_at": "2024-12-31T23:59:59Z",
+  "status": "active",
+  "scopes": ["blog:read"]
+}`}
+  type="admin"
+/>
+
+### Update Parameters
+
+All parameters are optional:
+
+- `name`: New unique name
+- `description`: New description
+- `expire_at`: New expiration date
+- `status`: New status
+- `scopes`: New permission scopes
+
+## Delete API User
+
+Delete an API user.
+
+<Requester
+  method="DELETE"
+  url="/admin/api/:id"
+  description="Delete an API user. Requires Super Admin role."
+  type="admin"
+/>
+
+## Regenerate Token
+
+Generate a new token for an existing API user.
+
+<Requester
+  method="POST"
+  url="/admin/api/regenerate-token/:id"
+  description="Generate a new token for an API user. Requires Super Admin role."
+  type="admin"
+/>
+
+## Error Responses
+
+### 400 Bad Request
+
+- Invalid input data
+- Missing required fields
+- Invalid status value
+- Duplicate name
+
+```json
+{
+  "error": "Error message"
+}
+```
+
+### 404 Not Found
+
+- API user not found
+
+```json
+{
+  "error": "API user not found"
+}
+```
+
+### 403 Forbidden
+
+- Insufficient permissions
+
+```json
+{
+  "error": "Access denied"
+}
+```
+
+## Best Practices
+
+1. **Token Security**
+
+   - Store tokens securely
+   - Rotate tokens periodically
+   - Never share tokens in public repositories
+
+2. **Scope Management**
+
+   - Follow the principle of least privilege
+   - Regularly review and update scopes
+   - Use specific scopes instead of broad permissions
+
+3. **Monitoring**
+
+   - Monitor API user activity
+   - Set up alerts for suspicious behavior
+   - Review access logs regularly
+
+4. **Expiration**
+   - Set reasonable expiration dates
+   - Review and renew before expiration
+   - Clean up expired users regularly

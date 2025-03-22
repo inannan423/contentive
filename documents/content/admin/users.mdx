@@ -1,0 +1,194 @@
+import Requester from "../../components/requester";
+
+# Admin Users Management
+
+This document outlines the API endpoints for managing admin users in the system.
+
+## Authentication
+
+All schema management endpoints require Super Admin role access.
+
+## List All Users
+
+Retrieve a list of all admin users in the system.
+
+<Requester
+  method="GET"
+  url="/admin/users"
+  description="Get all admin users. Requires Viewer role or above."
+  type="admin"
+/>
+
+## Get User by ID
+
+Retrieve a specific admin user by their ID.
+
+<Requester
+  method="GET"
+  url="/admin/user/:id"
+  description="Get a specific admin user. Requires Viewer role or above."
+  type="admin"
+/>
+
+## Create User
+
+Create a new admin user in the system.
+
+<Requester
+  method="POST"
+  url="/admin/user"
+  description="Create a new admin user. Requires Super Admin role."
+  defaultBody={`{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "Password123",
+  "role": "editor",
+  "status": "active"
+}`}
+  type="admin"
+/>
+
+### Request Body Parameters
+
+- `name` (required): User's full name
+- `email` (required): Valid email address
+- `password` (required): Password meeting the following requirements:
+  - At least 8 characters long
+  - Contains at least one uppercase letter
+  - Contains at least one lowercase letter
+  - Contains at least one number
+- `role` (required): One of: `viewer`, `editor`, `admin`
+- `status` (required): One of: `active`, `inactive`
+
+## Update User
+
+Update an existing admin user's information.
+
+<Requester
+  method="PUT"
+  url="/admin/user/:id"
+  description="Update an existing admin user. Requires Super Admin role."
+  defaultBody={`{
+  "name": "Updated Name",
+  "email": "updated@example.com",
+  "password": "NewPassword123",
+  "role": "editor",
+  "status": "active"
+}`}
+  type="admin"
+/>
+
+### Update Parameters
+
+All parameters are optional:
+
+- `name`: New user name
+- `email`: New email address
+- `password`: New password (must meet password requirements)
+- `role`: New role
+- `status`: New status
+
+### Update Restrictions
+
+- Cannot modify super admin users unless you are a super admin
+- Cannot set role to `super_admin`
+- Cannot update to an existing email or name
+- Password must meet the same requirements as creation
+
+## Delete User
+
+Delete an admin user from the system.
+
+<Requester
+  method="DELETE"
+  url="/admin/user/:id"
+  description="Delete an admin user. Requires Super Admin role."
+  type="admin"
+/>
+
+### Deletion Restrictions
+
+- Cannot delete your own account
+- Cannot delete super admin users
+- Requires Super Admin role
+
+## Error Responses
+
+The API may return the following error responses:
+
+### 400 Bad Request
+
+- Missing required fields
+- Invalid email format
+- Invalid password format
+- Invalid role
+- Invalid status
+- Name or email already exists
+
+```json
+{
+  "error": "Error message describing the issue"
+}
+```
+
+### 401 Unauthorized
+
+- Invalid or missing authentication token
+
+```json
+{
+  "error": "Invalid token"
+}
+```
+
+### 403 Forbidden
+
+- Insufficient permissions
+- Attempting to modify/delete super admin
+- Attempting to delete self
+
+```json
+{
+  "error": "Access denied"
+}
+```
+
+### 404 Not Found
+
+- User not found
+
+```json
+{
+  "error": "User not found"
+}
+```
+
+### 500 Internal Server Error
+
+- Server-side errors
+
+```json
+{
+  "error": "Failed to process request"
+}
+```
+
+## Role Hierarchy
+
+The system implements a hierarchical role system:
+
+1. Super Admin (Highest)
+2. Admin
+3. Editor
+4. Viewer (Lowest)
+
+Each role inherits permissions from roles below it. For example, an Editor can perform all Viewer actions plus their own permissions.
+
+## Security Notes
+
+1. Passwords are securely hashed before storage
+2. Email addresses must be unique in the system
+3. User names must be unique in the system
+4. All actions are logged for audit purposes
+5. Token-based authentication is required for all endpoints
+6. Role-based access control is strictly enforced
