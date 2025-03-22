@@ -4,6 +4,7 @@ import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import '../globals.css'
 import footer from '../components/footer'
+import { IconBrandGithub } from '@tabler/icons-react';
 
 export const metadata = {
   title: 'Contentive Documentation',
@@ -22,6 +23,8 @@ const navbar = (
           </p>
       </div>
     }
+    projectLink="https://github.com/inannan423/contentive"
+    projectIcon = <IconBrandGithub stroke={2} />
   />
 )
 
