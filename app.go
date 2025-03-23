@@ -4,6 +4,8 @@ import (
 	"contentive/internal/bootstrap"
 	"contentive/internal/config"
 	"contentive/internal/database"
+	llm "contentive/internal/llm"
+	"contentive/internal/llm/openai"
 	adminroutes "contentive/internal/routes/admin"
 	apiroutes "contentive/internal/routes/api"
 	"contentive/internal/storage"
@@ -20,6 +22,9 @@ func main() {
 	database.InitDB()
 	database.InitSchemaValidator()
 	bootstrap.InitSuperUser()
+
+	// init LLM	Provider
+	initLLMProvider()
 
 	// init storage
 	initStorageProvider()
@@ -68,5 +73,28 @@ func initStorageProvider() {
 		log.Println("Aliyun OSS storage provider initialized")
 	default:
 		log.Fatalf("Unsupported storage type: %s", config.AppConfig.MEDIA_STORAGE_TYPE)
+	}
+}
+
+// initLLMProvider initializes the appropriate LLM provider based on configuration
+func initLLMProvider() {
+	switch config.AppConfig.LLM_PROVIDER {
+	case "openai":
+		llm.SetProvider(openai.NewOpenAIProvider(
+			config.AppConfig.LLM_API_KEY,
+			config.AppConfig.LLM_BASE_URL,
+			config.AppConfig.LLM_MODEL,
+		))
+		log.Println("OpenAI LLM provider initialized")
+	case "qwen":
+		// qwen support openai client
+		llm.SetProvider(openai.NewOpenAIProvider(
+			config.AppConfig.LLM_API_KEY,
+			config.AppConfig.LLM_BASE_URL,
+			config.AppConfig.LLM_MODEL,
+		))
+		log.Println("Qwen LLM provider initialized")
+	default:
+		log.Fatalf("Unsupported LLM provider: %s", config.AppConfig.LLM_PROVIDER)
 	}
 }

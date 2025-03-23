@@ -41,9 +41,29 @@ func InitDB() {
 	}
 	logger.GeneralAction("Enum types created successfully!")
 
+	// Check if pgvector exists, pgvector is a Postgres extension that provides vector similarity search
+	var hasPgvectorExtension bool
+	err := DB.Raw(`SELECT EXISTS (
+		SELECT 1 FROM pg_extension WHERE extname = 'vector'
+	)`).Scan(&hasPgvectorExtension).Error
+	if err != nil {
+		logger.GeneralAction(fmt.Sprintf("Error checking pgvector extension: %v", err))
+		log.Fatal("failed to check pgvector extension:", err)
+	}
+	logger.GeneralAction(fmt.Sprintf("Checking if pgvector extension exists: %v", hasPgvectorExtension))
+
+	// If pgvector does not exist, create it
+	if !hasPgvectorExtension {
+		if err := DB.Exec(`CREATE EXTENSION IF NOT EXISTS vector`).Error; err != nil {
+			logger.GeneralAction(fmt.Sprintf("Error creating pgvector extension: %v", err))
+			log.Fatal("Failed to create pgvector extension. Make sure it's installed on your PostgreSQL server.")
+		}
+		logger.GeneralAction("pgvector extension created successfully")
+	}
+
 	// check if uuid-ossp extension exists
 	var hasExtension bool
-	err := DB.Raw(`SELECT EXISTS (
+	err = DB.Raw(`SELECT EXISTS (
         SELECT 1 FROM pg_extension WHERE extname = 'uuid-ossp'
     )`).Scan(&hasExtension).Error
 	if err != nil {
