@@ -45,6 +45,7 @@ func main() {
 
 	apiroutes.RegisterAPIContentRoutes(app)
 	apiroutes.RegisterAPIMediaRoutes(app)
+	apiroutes.RegisterAPILLMRoutes(app)
 
 	app.Listen(":8080")
 }
