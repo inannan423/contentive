@@ -112,15 +112,6 @@ Contentive implements several security measures:
 
 We welcome contributions!
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🌟 Support
 
 If you find Contentive helpful, please consider giving it a star ⭐️
-
-## 📞 Contact
-
-- GitHub Issues: [Create an issue](https://github.com/inannan423/contentive/issues)
-- Email: [your-email@example.com](mailto:jetzihan@outlook.com)
