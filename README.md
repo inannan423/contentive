@@ -1,5 +1,7 @@
 # _"Contentive"_ 📖 Headless CMS
 
+> Currently, this project has not been completed and we are working hard on it...
+
 <img src="./documents/public/contentive_post.png" alt="Contentive Logo">
 <div align="center">
   <h2>A Modern Headless CMS for Content Management</h3>
